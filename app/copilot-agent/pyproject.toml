@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copilot-agent"
+version = "1.0.0"
+description = "GitHub Models CLI agent powered by azure-ai-inference"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = [
+    "azure-ai-inference>=1.0.0b9",
+]
+
+[project.scripts]
+copilot-agent = "agent:main"
+
+[tool.setuptools]
+py-modules = ["agent"]
+include-package-data = true
+
+[tool.setuptools.data-files]
+"share/copilot-agent/agents" = ["agents/assistant.md", "agents/coder.md"]

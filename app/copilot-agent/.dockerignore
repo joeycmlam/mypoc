@@ -1,0 +1,38 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / environment files
+.env
+*.env
+
+# Development tooling
+.github/
+.vscode/
+*.md
+!README.md
+
+# Tests
+tests/
+test_*
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# OS artefacts
+.DS_Store
+Thumbs.db
