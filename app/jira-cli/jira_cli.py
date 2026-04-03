@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 """
-jira-cli — Read a Jira issue and rewrite it in a structured Markdown format.
+jira-cli — Read and write Jira issues as structured Markdown.
 
 Fetches the issue summary, description, comments, and all attached documents
 (text, PDF, Word) and outputs a single clean structured document.
+Can also update the issue description and add comments.
 
-Usage:
+Usage (read):
   python jira_cli.py PROJECT-123
   python jira_cli.py PROJECT-123 --output report.md
   python jira_cli.py PROJECT-123 --no-attachments
   python jira_cli.py PROJECT-123 --comments-limit 10
+
+Usage (write):
+  python jira_cli.py PROJECT-123 --add-comment "My comment"
+  python jira_cli.py PROJECT-123 --add-comment -            # read comment text from stdin
+  python jira_cli.py PROJECT-123 --update-description "New description"
+  python jira_cli.py PROJECT-123 --update-description -     # read description from stdin
 
 Required environment variables (or .env file):
   JIRA_URL        — Jira base URL, e.g. https://yourorg.atlassian.net
@@ -157,6 +164,38 @@ def _indent(text: str, spaces: int = 2) -> str:
 
 def _hr(char: str = "-", width: int = 72) -> str:
     return char * width
+
+
+# ---------------------------------------------------------------------------
+# Write operations
+# ---------------------------------------------------------------------------
+
+def _read_text_arg(value: str) -> str:
+    """Return value as-is, or read from stdin if value is '-'."""
+    if value == "-":
+        return sys.stdin.read()
+    return value
+
+
+def add_comment(jira: JIRA, issue_key: str, body: str) -> None:
+    """Add a comment to a Jira issue."""
+    try:
+        jira.add_comment(issue_key, body)
+        console.print(f"[green]Comment added[/green] to {issue_key}")
+    except JIRAError as exc:
+        console.print(f"[red]Error adding comment to {issue_key}:[/red] {exc.text}", highlight=False)
+        sys.exit(1)
+
+
+def update_description(jira: JIRA, issue_key: str, description: str) -> None:
+    """Replace the description of a Jira issue."""
+    try:
+        issue = jira.issue(issue_key)
+        issue.update(fields={"description": description})
+        console.print(f"[green]Description updated[/green] for {issue_key}")
+    except JIRAError as exc:
+        console.print(f"[red]Error updating description for {issue_key}:[/red] {exc.text}", highlight=False)
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -318,11 +357,17 @@ def main() -> None:
         description="Fetch a Jira issue (description, comments, attachments) and output a structured Markdown document.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
-            Examples:
+            Examples (read):
               python jira_cli.py PROJECT-123
               python jira_cli.py PROJECT-123 --output report.md
               python jira_cli.py PROJECT-123 --no-attachments
               python jira_cli.py PROJECT-123 --comments-limit 5
+
+            Examples (write):
+              python jira_cli.py PROJECT-123 --add-comment "Reviewed and approved."
+              python jira_cli.py PROJECT-123 --add-comment -
+              python jira_cli.py PROJECT-123 --update-description "New description text"
+              python jira_cli.py PROJECT-123 --update-description -
         """),
     )
     parser.add_argument("issue_key", help="Jira issue key, e.g. PROJECT-123")
@@ -344,6 +389,16 @@ def main() -> None:
         help="Only show the last N comments (0 = show all, default)",
     )
     parser.add_argument(
+        "--add-comment",
+        metavar="TEXT",
+        help="Add a comment to the issue. Use '-' to read text from stdin.",
+    )
+    parser.add_argument(
+        "--update-description",
+        metavar="TEXT",
+        help="Replace the issue description. Use '-' to read text from stdin.",
+    )
+    parser.add_argument(
         "--env-file",
         metavar="PATH",
         default=".env",
@@ -358,10 +413,21 @@ def main() -> None:
         load_dotenv(env_path, override=True)
 
     jira = get_jira_client()
+    issue_key = args.issue_key.upper()
 
+    # ── Write operations (mutually exclusive of the read/output flow) ────────
+    write_requested = args.add_comment is not None or args.update_description is not None
+    if write_requested:
+        if args.update_description is not None:
+            update_description(jira, issue_key, _read_text_arg(args.update_description))
+        if args.add_comment is not None:
+            add_comment(jira, issue_key, _read_text_arg(args.add_comment))
+        return
+
+    # ── Read / format operation ───────────────────────────────────────────────
     result = format_issue(
         jira,
-        args.issue_key.upper(),
+        issue_key,
         include_attachments=not args.no_attachments,
         comments_limit=args.comments_limit,
     )
