@@ -18,6 +18,7 @@ Required environment variable:
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -208,12 +209,16 @@ def run_agentic_loop(
         FunctionCall,
         SystemMessage,
         ToolMessage,
+        UserMessage,
     )
     from azure.core.exceptions import HttpResponseError
 
     history = [SystemMessage(system_prompt), *initial_messages]
     max_turns = 20
     last_content = ""
+    # Track consecutive text-only turns to prevent infinite continuation loops
+    _text_only_turns = 0
+    _MAX_TEXT_ONLY = 3
 
     for _turn in range(max_turns):
         try:
@@ -254,9 +259,26 @@ def run_agentic_loop(
 
         last_content = content
 
-        # No tool calls → model is done
+        # No tool calls — check whether the model paused mid-workflow or is truly done.
         if not tool_calls_raw:
+            has_bash_blocks = bool(re.search(r"```(?:bash|sh)\b", content))
+            is_mid_workflow = bool(re.search(
+                r"\b(next[,\s]|please wait|i will now|i will next|let me now|"
+                r"proceeding to|moving to step|continuing|i'll now|i'll next)\b",
+                content,
+                re.IGNORECASE,
+            ))
+            if (has_bash_blocks or is_mid_workflow) and _text_only_turns < _MAX_TEXT_ONLY:
+                _text_only_turns += 1
+                history.append(AssistantMessage(content=content or None))
+                history.append(UserMessage(
+                    "Please continue and complete the remaining steps, "
+                    "executing all required commands via the bash_exec tool."
+                ))
+                continue
             return last_content
+
+        _text_only_turns = 0  # reset counter once tool calls resume
 
         # Append assistant message (with tool calls) to history
         sdk_tool_calls = [
