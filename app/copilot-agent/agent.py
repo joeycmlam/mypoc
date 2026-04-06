@@ -33,6 +33,9 @@ load_dotenv(_here.parent / "jira-cli" / ".env")
 
 GITHUB_MODELS_ENDPOINT = "https://models.inference.ai.azure.com"
 
+# Maximum sub-agent recursion depth (parent → child = depth 1, grandchild = depth 2)
+_MAX_RECURSION_DEPTH = 2
+
 # Tool definitions exposed to the model
 TOOLS = [
     {
@@ -55,7 +58,52 @@ TOOLS = [
                 "required": ["command"],
             },
         },
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "invoke_agent",
+            "description": (
+                "Delegate a task to a specialised sub-agent defined by a Markdown "
+                "agent file. The sub-agent runs its own agentic loop with a fresh "
+                "conversation history and returns its final output. Use this instead "
+                "of manually cat-ing agent files and pretending to switch persona."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "agent_file": {
+                        "type": "string",
+                        "description": (
+                            "Path to the sub-agent Markdown file (e.g. "
+                            "'agents/jira-reader.md'). Relative paths are resolved "
+                            "from the copilot-agent project directory."
+                        ),
+                    },
+                    "instruction": {
+                        "type": "string",
+                        "description": "The task or question for the sub-agent.",
+                    },
+                    "context": {
+                        "type": "string",
+                        "description": (
+                            "Optional data to inject before the instruction (e.g. "
+                            "ticket content, requirements). Avoids the sub-agent "
+                            "having to re-fetch information the parent already has."
+                        ),
+                    },
+                    "model": {
+                        "type": "string",
+                        "description": (
+                            "Model for the sub-agent. Defaults to the parent model "
+                            "if omitted."
+                        ),
+                    },
+                },
+                "required": ["agent_file", "instruction"],
+            },
+        },
+    },
 ]
 
 
@@ -102,7 +150,15 @@ def build_client(token: str):
     )
 
 
-def execute_tool(name: str, args: dict) -> str:
+def execute_tool(
+    name: str,
+    args: dict,
+    *,
+    client=None,
+    model: str = "gpt-4o",
+    stream: bool = True,
+    depth: int = 0,
+) -> str:
     """Execute a tool call and return the result as a string."""
     if name == "bash_exec":
         command = args.get("command", "")
@@ -126,6 +182,63 @@ def execute_tool(name: str, args: dict) -> str:
             return "[Error: command timed out after 120s]"
         except Exception as exc:
             return f"[Error: {exc}]"
+
+    if name == "invoke_agent":
+        if depth >= _MAX_RECURSION_DEPTH:
+            return (
+                f"[Error: maximum sub-agent recursion depth ({_MAX_RECURSION_DEPTH}) "
+                "reached — cannot invoke a further nested sub-agent]"
+            )
+        if client is None:
+            return "[Error: invoke_agent requires a client instance]"
+
+        agent_file = args.get("agent_file", "").strip()
+        instruction = args.get("instruction", "").strip()
+        sub_model = args.get("model") or model
+        context = args.get("context", "").strip()
+
+        if not agent_file:
+            return "[Error: agent_file is required for invoke_agent]"
+        if not instruction:
+            return "[Error: instruction is required for invoke_agent]"
+
+        # Resolve relative paths from the copilot-agent project directory
+        agent_path = Path(agent_file)
+        if not agent_path.is_absolute():
+            agent_path = _here / agent_file
+
+        if not agent_path.exists():
+            return f"[Error: agent file '{agent_file}' not found at {agent_path}]"
+
+        sub_system_prompt = agent_path.read_text(encoding="utf-8").strip()
+
+        # Build user message, optionally prepending injected context
+        from azure.ai.inference.models import UserMessage
+
+        user_content = instruction
+        if context:
+            user_content = f"Context:\n{context}\n\n{instruction}"
+
+        label = str(agent_path.name)
+        preview = instruction[:80] + ("..." if len(instruction) > 80 else "")
+        print(
+            f"\n\033[35m[Sub-agent: {label} | depth {depth + 1}]\033[0m {preview}",
+            flush=True,
+        )
+
+        sub_result = run_agentic_loop(
+            client=client,
+            system_prompt=sub_system_prompt,
+            model=sub_model,
+            initial_messages=[UserMessage(user_content)],
+            stream=stream,
+            max_turns=10,
+            depth=depth + 1,
+        )
+
+        print(f"\033[35m[Sub-agent {label} complete]\033[0m", flush=True)
+        return sub_result or "(no output from sub-agent)"
+
     return f"[Error: unknown tool '{name}']"
 
 
@@ -194,7 +307,13 @@ def _accumulate_stream(response) -> tuple:
 # ---------------------------------------------------------------------------
 
 def run_agentic_loop(
-    client, system_prompt: str, model: str, initial_messages: list, stream: bool
+    client,
+    system_prompt: str,
+    model: str,
+    initial_messages: list,
+    stream: bool,
+    max_turns: int = 20,
+    depth: int = 0,
 ) -> str:
     """
     Run an agentic tool-calling loop until the model produces a final answer
@@ -202,6 +321,10 @@ def run_agentic_loop(
 
     Prints each tool call and its result so the user can follow the full
     reasoning / execution process.
+
+    Args:
+        max_turns: Maximum number of LLM turns before aborting (default 20).
+        depth: Current sub-agent nesting depth (0 = top-level).
     """
     from azure.ai.inference.models import (
         AssistantMessage,
@@ -214,7 +337,6 @@ def run_agentic_loop(
     from azure.core.exceptions import HttpResponseError
 
     history = [SystemMessage(system_prompt), *initial_messages]
-    max_turns = 20
     last_content = ""
     # Track consecutive text-only turns to prevent infinite continuation loops
     _text_only_turns = 0
@@ -301,7 +423,9 @@ def run_agentic_loop(
 
             cmd_display = args.get("command", tc["args"])
             print(f"\n\033[36m[Tool: {tc['name']}]\033[0m {cmd_display}", flush=True)
-            result = execute_tool(tc["name"], args)
+            result = execute_tool(
+                tc["name"], args, client=client, model=model, stream=stream, depth=depth
+            )
             print(f"\033[33m[Result]\033[0m\n{result}\n", flush=True)
 
             history.append(ToolMessage(tool_call_id=tc["id"], content=result))
