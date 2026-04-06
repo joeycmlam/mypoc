@@ -34,6 +34,7 @@ import asyncio
 import os
 import re
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -57,6 +58,22 @@ SUB_AGENT_MAX_TURNS = 10
 MAX_RECURSION_DEPTH = 2
 
 _STEP_RE = re.compile(r"\bStep\s+(\d+)", re.IGNORECASE)
+
+
+# ---------------------------------------------------------------------------
+# Turn state
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _TurnState:
+    """Mutable state collected during a single assistant turn."""
+    content_parts: list[str] = field(default_factory=list)
+    tool_called: bool = False
+    done: asyncio.Event = field(default_factory=asyncio.Event)
+
+    @property
+    def content(self) -> str:
+        return "".join(self.content_parts)
 
 
 # ---------------------------------------------------------------------------
@@ -196,67 +213,54 @@ def _is_mid_workflow(content: str) -> bool:
     return has_bash_blocks or has_signal or _has_pending_steps(content)
 
 
+def _continuation_prompt(assistant_messages: list[str]) -> str:
+    """Build the continuation message based on the last completed step."""
+    last_step = _last_completed_step(assistant_messages)
+    if last_step is not None:
+        return (
+            f"Step {last_step} was completed. "
+            f"Continue with Step {last_step + 1} now, "
+            "executing all required commands via bash_exec or invoke_agent."
+        )
+    return (
+        "Please continue and complete the remaining steps, "
+        "executing all required commands via bash_exec or invoke_agent."
+    )
+
+
 # ---------------------------------------------------------------------------
-# Core agentic loop (one CopilotClient session per invocation)
+# Sub-agent handler factory, tool builder, and event handler
 # ---------------------------------------------------------------------------
 
-async def run_agentic_loop(
-    system_prompt: str,
-    model: str,
-    initial_prompt: str,
-    streaming: bool,
-    max_turns: int = MAX_TURNS_DEFAULT,
-    depth: int = 0,
-    extra_context: str = "",
-) -> str:
-    """
-    Run an agentic loop using the GitHub Copilot SDK.
+def _make_invoke_agent_handler(model: str, streaming: bool, depth: int):
+    """Return a ToolHandler for invoke_agent bound to the given runtime context."""
+    async def _handle(inv) -> object:
+        from copilot.tools import ToolResult
 
-    Each invocation creates its own CopilotClient + Session so sub-agents are
-    fully isolated (independent history and turn budget).
-
-    Tool execution:
-      - bash_exec  → runs shell command via asyncio.create_subprocess_shell
-      - invoke_agent → spawns a nested run_agentic_loop (depth-guarded)
-
-    Loop resilience improvements vs agent.py:
-      - max_turns configurable via --max-turns (default 20, max 50)
-      - _MAX_TEXT_ONLY raised from 3 → 5 for top-level agents (depth == 0)
-      - text-only abort suppressed when pending step numbers detected
-      - step-aware continuation prompt injects "Step N+1" explicitly
-    """
-    from copilot import CopilotClient
-    from copilot.session import PermissionHandler, SessionEventType
-    from copilot.tools import Tool, ToolResult
-
-    _MAX_TEXT_ONLY = 3 if depth > 0 else 5
-    _text_only_turns = 0
-    _turn = 0
-    _assistant_messages: list[str] = []
-    last_content = ""
-
-    # Build the invoke_agent handler capturing depth for recursion guard
-    async def _handle_invoke_agent(inv) -> ToolResult:
-        args = inv.arguments or {}
         if depth >= MAX_RECURSION_DEPTH:
-            return ToolResult(text_result_for_llm="[Error: max sub-agent recursion depth reached]", result_type="failure")
+            return ToolResult(
+                text_result_for_llm="[Error: max sub-agent recursion depth reached]",
+                result_type="failure",
+            )
 
+        args = inv.arguments or {}
         agent_file = args.get("agent_file", "")
         instruction = args.get("instruction", "")
         context = args.get("context", "")
 
         if not agent_file:
-            return ToolResult(text_result_for_llm="[Error: invoke_agent requires 'agent_file']", result_type="failure")
+            return ToolResult(
+                text_result_for_llm="[Error: invoke_agent requires 'agent_file']",
+                result_type="failure",
+            )
         if not instruction:
-            return ToolResult(text_result_for_llm="[Error: invoke_agent requires 'instruction']", result_type="failure")
+            return ToolResult(
+                text_result_for_llm="[Error: invoke_agent requires 'instruction']",
+                result_type="failure",
+            )
 
-        agent_path = _here / agent_file
-        sub_prompt = load_agent_file(str(agent_path))
-
-        print(
-            f"\n\033[35m[Sub-agent: {agent_file}]\033[0m depth={depth + 1}",
-            flush=True,
-        )
+        sub_prompt = load_agent_file(str(_here / agent_file))
+        print(f"\n\033[35m[Sub-agent: {agent_file}]\033[0m depth={depth + 1}", flush=True)
         result = await run_agentic_loop(
             system_prompt=sub_prompt,
             model=model,
@@ -267,10 +271,16 @@ async def run_agentic_loop(
             extra_context=context,
         )
         print(f"\033[35m[Sub-agent: {agent_file} complete]\033[0m\n", flush=True)
-        text = result or "(sub-agent returned no output)"
-        return ToolResult(text_result_for_llm=text)
+        return ToolResult(text_result_for_llm=result or "(sub-agent returned no output)")
 
-    tools = [
+    return _handle
+
+
+def _build_tools(model: str, streaming: bool, depth: int) -> list:
+    """Build the tool list for a session at the given recursion depth."""
+    from copilot.tools import Tool
+
+    return [
         Tool(
             name="bash_exec",
             description=(
@@ -291,10 +301,71 @@ async def run_agentic_loop(
                 "Use this instead of reading agent files inline or switching persona."
             ),
             parameters=INVOKE_AGENT_SCHEMA,
-            handler=_handle_invoke_agent,
+            handler=_make_invoke_agent_handler(model, streaming, depth),
             skip_permission=True,
         ),
     ]
+
+
+def _make_event_handler(state: _TurnState, streaming: bool):
+    """Return an event handler that populates *state* for a single assistant turn."""
+    from copilot.session import SessionEventType
+
+    def _handler(event):
+        et = event.type
+        if streaming and et == SessionEventType.ASSISTANT_MESSAGE_DELTA:
+            chunk = getattr(event.data, "delta_content", "") or ""
+            print(chunk, end="", flush=True)
+            state.content_parts.append(chunk)
+        elif et == SessionEventType.ASSISTANT_MESSAGE:
+            content = getattr(event.data, "content", "") or ""
+            if not streaming:
+                print(content)
+            state.content_parts.append(content)
+        elif et in (SessionEventType.TOOL_EXECUTION_START, SessionEventType.TOOL_EXECUTION_COMPLETE):
+            state.tool_called = True
+        elif et == SessionEventType.SESSION_IDLE:
+            state.done.set()
+        elif et == SessionEventType.SESSION_ERROR:
+            print(
+                f"\n[Session error]: {getattr(event.data, 'message', str(event.data))}",
+                file=sys.stderr,
+            )
+            state.done.set()
+
+    return _handler
+
+
+# ---------------------------------------------------------------------------
+# Core agentic loop (one CopilotClient session per invocation)
+# ---------------------------------------------------------------------------
+
+async def run_agentic_loop(
+    system_prompt: str,
+    model: str,
+    initial_prompt: str,
+    streaming: bool,
+    max_turns: int = MAX_TURNS_DEFAULT,
+    depth: int = 0,
+    extra_context: str = "",
+) -> str:
+    """
+    Run an agentic loop using the GitHub Copilot SDK.
+
+    Each invocation creates its own CopilotClient + Session so sub-agents are
+    fully isolated (independent history and turn budget).
+    """
+    from copilot import CopilotClient
+    from copilot.session import PermissionHandler
+
+    _MAX_TEXT_ONLY = 3 if depth > 0 else 5
+    _text_only_turns = 0
+    _turn = 0
+    _assistant_messages: list[str] = []
+    last_content = ""
+
+    first_prompt = f"{extra_context}\n\n{initial_prompt}" if extra_context else initial_prompt
+    tools = _build_tools(model, streaming, depth)
 
     async with CopilotClient() as client:
         session = await client.create_session(
@@ -305,87 +376,32 @@ async def run_agentic_loop(
             system_message={"mode": "replace", "content": system_prompt},
         )
 
-        # Build the first prompt, optionally prepending extra context
-        first_prompt = initial_prompt
-        if extra_context:
-            first_prompt = f"{extra_context}\n\n{initial_prompt}"
-
-        # Send the first message and drive the multi-turn loop
         while _turn < max_turns:
-            done_event = asyncio.Event()
-            turn_content: list[str] = []
-            tool_called = False
+            state = _TurnState()
+            unsubscribe = session.on(_make_event_handler(state, streaming))
 
-            def _handler(event):
-                nonlocal tool_called
-                et = event.type
-                if streaming and et == SessionEventType.ASSISTANT_MESSAGE_DELTA:
-                    chunk = getattr(event.data, "delta_content", "") or ""
-                    print(chunk, end="", flush=True)
-                    turn_content.append(chunk)
-                elif et == SessionEventType.ASSISTANT_MESSAGE:
-                    content = getattr(event.data, "content", "") or ""
-                    if not streaming:
-                        print(content)
-                    turn_content.append(content)
-                elif et in (SessionEventType.TOOL_EXECUTION_START, SessionEventType.TOOL_EXECUTION_COMPLETE):
-                    tool_called = True
-                elif et == SessionEventType.SESSION_IDLE:
-                    done_event.set()
-                elif et == SessionEventType.SESSION_ERROR:
-                    print(
-                        f"\n[Session error]: {getattr(event.data, 'message', str(event.data))}",
-                        file=sys.stderr,
-                    )
-                    done_event.set()
-
-            unsubscribe = session.on(_handler)
-
-            if _turn == 0:
-                await session.send(first_prompt)
-            else:
-                # Continuation prompt
-                last_step = _last_completed_step(_assistant_messages)
-                if last_step is not None:
-                    next_step = last_step + 1
-                    cont = (
-                        f"Step {last_step} was completed. "
-                        f"Continue with Step {next_step} now, "
-                        "executing all required commands via bash_exec or invoke_agent."
-                    )
-                else:
-                    cont = (
-                        "Please continue and complete the remaining steps, "
-                        "executing all required commands via bash_exec or invoke_agent."
-                    )
-                await session.send(cont)
-
-            await done_event.wait()
+            prompt = first_prompt if _turn == 0 else _continuation_prompt(_assistant_messages)
+            await session.send(prompt)
+            await state.done.wait()
             unsubscribe()
 
-            full_content = "".join(turn_content)
-            if streaming and full_content:
-                print()  # newline after streamed output
+            if streaming and state.content:
+                print()
 
-            last_content = full_content
-            if full_content:
-                _assistant_messages.append(full_content)
+            last_content = state.content
+            if state.content:
+                _assistant_messages.append(state.content)
 
             _turn += 1
 
-            # If tools were called this turn, loop continues (the SDK handles
-            # the tool result → next model call internally; session.idle fires
-            # again when the follow-up is done).
-            if tool_called:
+            if state.tool_called:
                 _text_only_turns = 0
                 continue
 
-            # No tool calls — decide whether to continue or stop
-            if _is_mid_workflow(full_content) and _text_only_turns < _MAX_TEXT_ONLY:
+            if _is_mid_workflow(state.content) and _text_only_turns < _MAX_TEXT_ONLY:
                 _text_only_turns += 1
                 continue
 
-            # Truly done
             break
 
         await session.disconnect()
