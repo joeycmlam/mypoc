@@ -1,1 +1,2 @@
 azure-ai-inference>=1.0.0b9
+github-copilot-sdk

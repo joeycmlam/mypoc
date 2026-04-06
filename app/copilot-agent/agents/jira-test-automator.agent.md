@@ -14,38 +14,38 @@ The following instruction files define the personas you coordinate:
 - **Coder** — [app/copilot-agent/agents/coder.md](../../../app/copilot-agent/agents/coder.md): expert software engineer. Responsible for turning the scenario set into idiomatic, runnable pytest code.
 - **Assistant** — [app/copilot-agent/agents/assistant.md](../../../app/copilot-agent/agents/assistant.md): general-purpose helper. Used for any clarification, summarisation, or communication tasks that fall outside the above two roles.
 
-When activating a persona, read its instruction file and adopt those instructions for that step only, then return to the test-lead role.
+When delegating to a persona, use the `invoke_agent` tool with the `agent_file` path and a clear `instruction`. Pass relevant data via the `context` parameter. Do not read agent files inline or pretend to switch persona.
 
 ## Workflow
 
-### Step 1 — Analyse the Ticket  *(Test Designer persona)*
-Read and adopt `#file:app/copilot-agent/agents/test-designer.md`.
-- Use the Jira tool to fetch the ticket identified by the argument.
-- Produce: requirements analysis table, inferred domain context, and the full BDD scenario set grouped by category (Core / Regulatory / Edge / Negative / Non-Functional).
-- Return to test-lead role once the scenario set is complete.
+### Step 1 — Analyse the Ticket  *(Test Designer)*
 
-### Step 2 — Generate Test Code  *(Coder persona)*
-Read and adopt `#file:app/copilot-agent/agents/coder.md`.
-- Implement every scenario from Step 1 as a **pytest** test function.
-- Conventions:
-  - File: `test_<jira_key_lower>.py` (e.g. `test_scrum_42.py`)
-  - One test class per scenario group
-  - Docstring on each test cites the scenario title and its `Source:` tag
-  - `pytest.mark` applied using the scenario tags (`happy_path`, `edge_case`, `negative`, `regulatory`, etc.)
-  - Mock all external dependencies (OMS, pricing engine, Jira) with `unittest.mock`
-- Return to test-lead role once code is drafted.
+Delegate to the Test Designer via `invoke_agent`:
+- `agent_file`: `agents/test-designer.md`
+- `context`: the Jira ticket ID passed as the argument (e.g. "SCRUM-42")
+- `instruction`: "Fetch this Jira ticket and produce: requirements analysis table, inferred domain context, and the full BDD scenario set grouped by category (Core / Regulatory / Edge Cases / Negative Cases / Non-Functional)."
+
+Use the sub-agent's output as the authoritative scenario set for Step 2.
+
+### Step 2 — Generate Test Code  *(Coder)*
+
+Delegate to the Coder via `invoke_agent`:
+- `agent_file`: `agents/coder.md`
+- `context`: the full BDD scenario set returned from Step 1
+- `instruction`: "Implement every scenario as a pytest test function. Conventions: file named `test_<jira_key_lower>.py` (e.g. `test_scrum_42.py`); one test class per scenario group; docstring on each test cites the scenario title and its Source tag; `pytest.mark` applied using scenario tags (`happy_path`, `edge_case`, `negative`, `regulatory`, etc.); mock all external dependencies (OMS, pricing engine, Jira) with `unittest.mock`."
+
+Use the sub-agent's output as the test code for Step 3.
 
 ### Step 3 — Write the Test File
 Save the generated test file to `tests/` inside the relevant sub-project (or `tmp/` if no sub-project is clear).
 Create `tests/conftest.py` with shared fixtures if one does not already exist.
 
-### Step 4 — Report Back  *(Assistant persona)*
-Read and adopt `#file:app/copilot-agent/agents/assistant.md`.
-Produce a concise summary:
-1. **Ticket** — key, summary, and any gaps flagged by the Test Designer
-2. **Scenarios generated** — count by category
-3. **File created** — path to the test file
-4. **Open questions** — items needing business confirmation before sign-off
+### Step 4 — Report Back  *(Assistant)*
+
+Delegate to the Assistant via `invoke_agent`:
+- `agent_file`: `agents/assistant.md`
+- `context`: the test file path, scenario count by category, and any gaps flagged during Step 1
+- `instruction`: "Write a concise summary report with: (1) Ticket — key, summary, and gaps; (2) Scenarios generated — count by category; (3) File created — path to the test file; (4) Open questions — items needing business confirmation before sign-off."
 
 ## Constraints
 - DO NOT skip Step 1; test code must always follow scenario analysis.

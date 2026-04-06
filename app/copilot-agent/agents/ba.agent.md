@@ -162,6 +162,8 @@ List every ambiguity, missing piece, or assumption that requires business confir
 
 ### Step 5 — Update the Jira Ticket
 
+> **MANDATORY — do not end the workflow without completing this step.** If you are running low on turns, skip optional analysis depth but always attempt the Jira update. Fallback: output the full update text for manual copy-paste if the CLI fails.
+
 Write the complete requirements back to the Jira ticket using the two write commands below. Run them from `app/` as the working directory.
 
 **5a. Update the description** — replace the ticket description with the full BRD drafted in Step 3. Pass the text via stdin using `-`:
@@ -206,19 +208,6 @@ Produce a final summary table:
 | Acceptance criteria written (AC count) | ✅ AC-01 … AC-XX |
 | Gaps & open questions listed | ✅ / ❌ |
 | Jira ticket updated | ✅ / ❌ (manual if CLI unavailable) |
-
----
-
-### Step 7 — Optional Handoff: Test Automation  *(Jira Test Automator)*
-
-> **Trigger**: Run this step only if the user explicitly requests test automation (e.g. "generate tests", "create a test suite", "automate the ACs").
-
-Delegate to the Jira Test Automator sub-agent via `invoke_agent`:
-- `agent_file`: `agents/jira-test-automator.agent.md`
-- `context`: the ticket ID, functional requirements from §3.2, and the acceptance criteria from §3.4
-- `instruction`: "Generate a complete automated pytest test suite for this ticket based on the provided requirements and acceptance criteria."
-
-If the sub-agent returns an error or is unavailable, provide the AC set from §3.4 in a format ready for manual handoff.
 
 ---
 
