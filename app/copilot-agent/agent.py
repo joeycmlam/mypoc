@@ -9,6 +9,7 @@ Usage:
   python agent.py -a agents/assistant.md -m gpt-4o -i "Explain recursion"
   python agent.py -a agents/coder.md -m gpt-4o --interactive
   echo "Summarize this" | python agent.py -a agents/assistant.md -m gpt-4o
+  python agent.py -a agents/ba.agent.md -m gpt-4o -i "please provide the analysis of jira - SCRUM-12"
 
 Required environment variable:
   GITHUB_TOKEN  — a GitHub personal access token with 'models:read' scope.
