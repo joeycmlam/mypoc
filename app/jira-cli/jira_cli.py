@@ -17,6 +17,7 @@ Usage (write):
   python jira_cli.py PROJECT-123 --add-comment -            # read comment text from stdin
   python jira_cli.py PROJECT-123 --update-description "New description"
   python jira_cli.py PROJECT-123 --update-description -     # read description from stdin
+  python jira_cli.py PROJECT-123 --attach-file path/to/file.feature  # upload a file as an attachment
 
 Required environment variables (or .env file):
   JIRA_URL        — Jira base URL, e.g. https://yourorg.atlassian.net
@@ -198,6 +199,21 @@ def update_description(jira: JIRA, issue_key: str, description: str) -> None:
         sys.exit(1)
 
 
+def attach_file(jira: JIRA, issue_key: str, file_path: str) -> None:
+    """Upload a local file as an attachment to a Jira issue."""
+    path = Path(file_path)
+    if not path.exists():
+        console.print(f"[red]Error:[/red] File not found: {file_path}", highlight=False)
+        sys.exit(1)
+    try:
+        with open(path, "rb") as fh:
+            jira.add_attachment(issue=issue_key, attachment=fh, filename=path.name)
+        console.print(f"[green]File attached[/green] to {issue_key}: {path.name}")
+    except JIRAError as exc:
+        console.print(f"[red]Error attaching file to {issue_key}:[/red] {exc.text}", highlight=False)
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------------------
 # Main formatter
 # ---------------------------------------------------------------------------
@@ -368,6 +384,7 @@ def main() -> None:
               python jira_cli.py PROJECT-123 --add-comment -
               python jira_cli.py PROJECT-123 --update-description "New description text"
               python jira_cli.py PROJECT-123 --update-description -
+              python jira_cli.py PROJECT-123 --attach-file tests/scrum_12.feature
         """),
     )
     parser.add_argument("issue_key", help="Jira issue key, e.g. PROJECT-123")
@@ -399,6 +416,11 @@ def main() -> None:
         help="Replace the issue description. Use '-' to read text from stdin.",
     )
     parser.add_argument(
+        "--attach-file",
+        metavar="PATH",
+        help="Upload a local file as an attachment to the issue.",
+    )
+    parser.add_argument(
         "--env-file",
         metavar="PATH",
         default=".env",
@@ -416,12 +438,18 @@ def main() -> None:
     issue_key = args.issue_key.upper()
 
     # ── Write operations (mutually exclusive of the read/output flow) ────────
-    write_requested = args.add_comment is not None or args.update_description is not None
+    write_requested = (
+        args.add_comment is not None
+        or args.update_description is not None
+        or args.attach_file is not None
+    )
     if write_requested:
         if args.update_description is not None:
             update_description(jira, issue_key, _read_text_arg(args.update_description))
         if args.add_comment is not None:
             add_comment(jira, issue_key, _read_text_arg(args.add_comment))
+        if args.attach_file is not None:
+            attach_file(jira, issue_key, args.attach_file)
         return
 
     # ── Read / format operation ───────────────────────────────────────────────
