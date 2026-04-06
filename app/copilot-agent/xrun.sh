@@ -1,1 +1,0 @@
-python jira-cli/jira_cli.py SCRUM-12 | python copilot-agent/agent.py -a copilot-agent/agents/jira-reader.md -m gpt-4o
