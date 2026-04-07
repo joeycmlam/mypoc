@@ -77,16 +77,17 @@ export function AgentChat() {
       try {
         abortControllerRef.current = new AbortController();
 
-        const stream = streamAgent({
-          agent_file: `agents/${selectedAgent}`,
-          instruction: content,
-          model: selectedModel,
-          max_turns: maxTurns,
-        });
+        const stream = streamAgent(
+          {
+            agent_file: `agents/${selectedAgent}`,
+            instruction: content,
+            model: selectedModel,
+            max_turns: maxTurns,
+          },
+          abortControllerRef.current.signal
+        );
 
         for await (const event of stream) {
-          if (abortControllerRef.current?.signal.aborted) break;
-
           switch (event.type) {
             case "chunk":
               setMessages((prev) =>
@@ -143,20 +144,31 @@ export function AgentChat() {
           }
         }
       } catch (error) {
-        console.error("[v0] Stream error:", error);
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? {
-                  ...msg,
-                  content:
-                    msg.content ||
-                    "An error occurred while communicating with the agent.",
-                  isStreaming: false,
-                }
-              : msg
-          )
-        );
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // User stopped the stream — not an error
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, isStreaming: false }
+                : msg
+            )
+          );
+        } else {
+          console.error("[v0] Stream error:", error);
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    content:
+                      msg.content ||
+                      "An error occurred while communicating with the agent.",
+                    isStreaming: false,
+                  }
+                : msg
+            )
+          );
+        }
       } finally {
         setIsLoading(false);
         setCurrentTool(null);
