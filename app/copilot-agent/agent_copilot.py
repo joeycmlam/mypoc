@@ -157,6 +157,15 @@ class BashTool:
         "shell operation required by the workflow."
     )
 
+    @staticmethod
+    async def _terminate_process(proc: asyncio.subprocess.Process) -> None:
+        if proc.returncode is None:
+            proc.kill()
+            try:
+                await proc.communicate()
+            except Exception:
+                pass
+
     async def __call__(self, inv) -> object:
         from copilot.tools import ToolResult
 
@@ -176,11 +185,14 @@ class BashTool:
                     proc.communicate(), timeout=120
                 )
             except asyncio.TimeoutError:
-                proc.kill()
+                await self._terminate_process(proc)
                 return ToolResult(
                     text_result_for_llm="[Error: command timed out after 120s]",
                     result_type="failure",
                 )
+            except (KeyboardInterrupt, asyncio.CancelledError):
+                await self._terminate_process(proc)
+                raise
 
             output = stdout_bytes.decode(errors="replace")
             if stderr_bytes:
@@ -201,8 +213,14 @@ class BashTool:
 class AgentRunner:
     """
     Runs an agentic loop for a single AgentConfig.
+    
     Creates its own CopilotClient + Session so sub-agents are fully isolated.
     """
+
+    def __init__(self, config: AgentConfig) -> None:
+        self._config = config
+        self._bash_tool = BashTool()
+        self._finished: bool = False
 
     _INVOKE_AGENT_SCHEMA = {
         "type": "object",
@@ -229,9 +247,16 @@ class AgentRunner:
         "required": ["agent_file", "instruction"],
     }
 
-    def __init__(self, config: AgentConfig) -> None:
-        self._config = config
-        self._bash_tool = BashTool()
+    _FINISH_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "summary": {
+                "type": "string",
+                "description": "Brief summary of what was accomplished (shown to the user).",
+            }
+        },
+        "required": [],
+    }
 
     async def run(self, initial_prompt: str, extra_context: str = "") -> str:
         from copilot import CopilotClient
@@ -256,35 +281,42 @@ class AgentRunner:
                 system_message={"mode": "replace", "content": cfg.system_prompt},
             )
 
-            while turn < cfg.max_turns:
-                state = TurnState()
-                unsubscribe = session.on(self._make_event_handler(state))
+            try:
+                while turn < cfg.max_turns:
+                    state = TurnState()
+                    unsubscribe = session.on(self._make_event_handler(state))
 
-                prompt = first_prompt if turn == 0 else WorkflowAnalyser.continuation_prompt(assistant_messages)
-                await session.send(prompt)
-                await state.done.wait()
-                unsubscribe()
+                    try:
+                        prompt = first_prompt if turn == 0 else WorkflowAnalyser.continuation_prompt(assistant_messages)
+                        await session.send(prompt)
+                        await state.done.wait()
+                    finally:
+                        unsubscribe()
 
-                if cfg.streaming and state.content:
-                    print()
+                    if cfg.streaming and state.content:
+                        print()
 
-                last_content = state.content
-                if state.content:
-                    assistant_messages.append(state.content)
+                    last_content = state.content
+                    if state.content:
+                        assistant_messages.append(state.content)
 
-                turn += 1
+                    turn += 1
 
-                if state.tool_called:
-                    text_only_turns = 0
-                    continue
+                    # finish tool signals explicit completion — stop before any other checks
+                    if self._finished:
+                        break
 
-                if WorkflowAnalyser.is_mid_workflow(state.content) and text_only_turns < max_text_only:
-                    text_only_turns += 1
-                    continue
+                    if state.tool_called:
+                        text_only_turns = 0
+                        continue
 
-                break
+                    if WorkflowAnalyser.is_mid_workflow(state.content) and text_only_turns < max_text_only:
+                        text_only_turns += 1
+                        continue
 
-            await session.disconnect()
+                    break
+            finally:
+                await session.disconnect()
 
         if turn >= cfg.max_turns:
             print("[Warning: reached maximum tool-call turns]", file=sys.stderr)
@@ -343,6 +375,17 @@ class AgentRunner:
                 handler=self._handle_invoke_agent,
                 skip_permission=True,
             ),
+            Tool(
+                name="finish",
+                description=(
+                    "Signal that the workflow is fully complete. "
+                    "Call this as the LAST action once all steps are done and all outputs have been delivered. "
+                    "Do NOT call finish mid-workflow or before all required steps are complete."
+                ),
+                parameters=self._FINISH_SCHEMA,
+                handler=self._handle_finish,
+                skip_permission=True,
+            ),
         ]
 
     async def _handle_invoke_agent(self, inv) -> object:
@@ -387,6 +430,19 @@ class AgentRunner:
         print(f"\033[35m[Sub-agent: {agent_file} complete]\033[0m\n", flush=True)
         return ToolResult(text_result_for_llm=result or "(sub-agent returned no output)")
 
+    async def _handle_finish(self, inv) -> object:
+        from copilot.tools import ToolResult
+
+        args = inv.arguments or {}
+        summary = args.get("summary", "").strip()
+        self._finished = True
+        if summary:
+            print(f"\n\033[32m[Agent finished]\033[0m {summary}", flush=True)
+        else:
+            print("\n\033[32m[Agent finished]\033[0m", flush=True)
+        return ToolResult(text_result_for_llm="[Workflow complete. Session will now end.]")
+
+
 
 # ---------------------------------------------------------------------------
 # CLI — argument parsing and entry point
@@ -418,7 +474,11 @@ class CLI:
             sys.exit(1)
 
     async def run_once(self, config: AgentConfig, instruction: str) -> None:
-        await AgentRunner(config).run(instruction)
+        try:
+            await AgentRunner(config).run(instruction)
+        except KeyboardInterrupt:
+            print("\nInterrupted.", file=sys.stderr)
+            raise
 
     async def run_interactive(self, config: AgentConfig) -> None:
         print(f"Agent ready  |  model: {config.model}  |  sdk: github-copilot-sdk")
@@ -433,12 +493,16 @@ class CLI:
 
             if not user_input:
                 continue
-            if user_input.lower() in ("exit", "quit"):
+            if user_input.lower() in ("exit", "quit", "/exit", "/quit"):
                 print("Goodbye!")
                 break
 
             print("Agent: ", end="", flush=True)
-            await AgentRunner(config).run(user_input)
+            try:
+                await AgentRunner(config).run(user_input)
+            except KeyboardInterrupt:
+                print("\nInterrupted. Goodbye!", file=sys.stderr)
+                break
             print()
 
 
@@ -526,18 +590,22 @@ Prerequisites:
             max_turns=max_turns,
         )
 
-        if args.interactive:
-            asyncio.run(self.run_interactive(config))
-        elif args.instruction:
-            asyncio.run(self.run_once(config, args.instruction))
-        elif not sys.stdin.isatty():
-            instruction = sys.stdin.read().strip()
-            if not instruction:
-                print("Error: Empty instruction from stdin.", file=sys.stderr)
-                sys.exit(1)
-            asyncio.run(self.run_once(config, instruction))
-        else:
-            asyncio.run(self.run_interactive(config))
+        try:
+            if args.interactive:
+                asyncio.run(self.run_interactive(config))
+            elif args.instruction:
+                asyncio.run(self.run_once(config, args.instruction))
+            elif not sys.stdin.isatty():
+                instruction = sys.stdin.read().strip()
+                if not instruction:
+                    print("Error: Empty instruction from stdin.", file=sys.stderr)
+                    sys.exit(1)
+                asyncio.run(self.run_once(config, instruction))
+            else:
+                asyncio.run(self.run_interactive(config))
+        except KeyboardInterrupt:
+            print("\nInterrupted.", file=sys.stderr)
+            sys.exit(130)
 
 
 def main() -> None:
