@@ -1,6 +1,6 @@
 # Plan: REST API Service for `agent_copilot.py`
 
-Wrap the existing CLI agent in a **FastAPI HTTP service** by adding a new `api_server.py` module that reuses `AgentRunner`, `AgentConfig`, `BashTool`, and `WorkflowAnalyser` unchanged. The only modification to `agent_copilot.py` is a tiny `on_chunk` callback hook to bridge streaming to SSE.
+In addition to the existing CLI agent, please support in a **FastAPI HTTP service** by adding a new `api_server.py` module that reuses `AgentRunner`, `AgentConfig`, `BashTool`, and `WorkflowAnalyser` unchanged. The only modification to `agent_copilot.py` is a tiny `on_chunk` callback hook to bridge streaming to SSE.
 
 ---
 

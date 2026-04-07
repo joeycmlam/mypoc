@@ -78,7 +78,7 @@ def _extract_text_from_bytes(filename: str, data: bytes) -> str:
     name_lower = filename.lower()
 
     # Plain text variants
-    if any(name_lower.endswith(ext) for ext in (".txt", ".md", ".rst", ".csv", ".json", ".yaml", ".yml", ".xml", ".log")):
+    if any(name_lower.endswith(ext) for ext in (".txt", ".md", ".rst", ".csv", ".json", ".yaml", ".yml", ".xml", ".log", ".feature", ".py", ".sql", ".toml", ".ini", ".cfg", ".sh")):
         try:
             return data.decode("utf-8", errors="replace")
         except Exception:

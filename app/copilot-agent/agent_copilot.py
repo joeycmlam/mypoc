@@ -34,6 +34,7 @@ import asyncio
 import os
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -258,7 +259,13 @@ class AgentRunner:
         "required": [],
     }
 
-    async def run(self, initial_prompt: str, extra_context: str = "") -> str:
+    async def run(
+        self,
+        initial_prompt: str,
+        extra_context: str = "",
+        on_chunk: Callable[[str], None] | None = None,
+        on_tool: Callable[[str], None] | None = None,
+    ) -> str:
         from copilot import CopilotClient
         from copilot.session import PermissionHandler
 
@@ -284,7 +291,7 @@ class AgentRunner:
             try:
                 while turn < cfg.max_turns:
                     state = TurnState()
-                    unsubscribe = session.on(self._make_event_handler(state))
+                    unsubscribe = session.on(self._make_event_handler(state, on_chunk=on_chunk, on_tool=on_tool))
 
                     try:
                         prompt = first_prompt if turn == 0 else WorkflowAnalyser.continuation_prompt(assistant_messages)
@@ -293,7 +300,7 @@ class AgentRunner:
                     finally:
                         unsubscribe()
 
-                    if cfg.streaming and state.content:
+                    if cfg.streaming and state.content and on_chunk is None:
                         print()
 
                     last_content = state.content
@@ -323,7 +330,7 @@ class AgentRunner:
 
         return last_content
 
-    def _make_event_handler(self, state: TurnState):
+    def _make_event_handler(self, state: TurnState, on_chunk=None, on_tool=None):
         from copilot.session import SessionEventType
 
         streaming = self._config.streaming
@@ -332,15 +339,24 @@ class AgentRunner:
             et = event.type
             if streaming and et == SessionEventType.ASSISTANT_MESSAGE_DELTA:
                 chunk = getattr(event.data, "delta_content", "") or ""
-                print(chunk, end="", flush=True)
+                if on_chunk is not None:
+                    on_chunk(chunk)
+                else:
+                    print(chunk, end="", flush=True)
                 state.content_parts.append(chunk)
             elif et == SessionEventType.ASSISTANT_MESSAGE:
                 content = getattr(event.data, "content", "") or ""
                 if not streaming:
-                    print(content)
+                    if on_chunk is not None:
+                        on_chunk(content)
+                    else:
+                        print(content)
                 state.content_parts.append(content)
             elif et in (SessionEventType.TOOL_EXECUTION_START, SessionEventType.TOOL_EXECUTION_COMPLETE):
                 state.tool_called = True
+                if on_tool is not None and et == SessionEventType.TOOL_EXECUTION_START:
+                    tool_name = getattr(event.data, "tool_name", "") or ""
+                    on_tool(tool_name)
             elif et == SessionEventType.SESSION_IDLE:
                 state.done.set()
             elif et == SessionEventType.SESSION_ERROR:
