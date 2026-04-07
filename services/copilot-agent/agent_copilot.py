@@ -279,12 +279,16 @@ class AgentRunner:
         first_prompt = f"{extra_context}\n\n{initial_prompt}" if extra_context else initial_prompt
         tools = self._build_tools()
 
+        skills_dir = cfg.base_dir / "skills"
+        skill_directories = [str(path) for path in skills_dir.glob("*/") if path.is_dir()]
+
         async with CopilotClient() as client:
             session = await client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
                 model=cfg.model,
                 streaming=cfg.streaming,
                 tools=tools,
+                skill_directories=skill_directories,
                 system_message={"mode": "replace", "content": cfg.system_prompt},
             )
 

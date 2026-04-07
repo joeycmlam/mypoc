@@ -28,7 +28,7 @@ The following agents are available as delegates. This agent orchestrates them at
 | Agent | `agent_file` path | Responsibility |
 |-------|------|----------------|
 | **Jira Reader** | `agents/jira-reader.md` | Analyse raw Jira CLI output; extract metadata table, acceptance criteria, gaps, and suggested next actions |
-| **Test Designer** | `agents/test-designer.md` | Produce enriched BDD Gherkin scenarios from requirements; covers happy-path, edge, negative, regulatory, data-quality, security, and performance categories |
+| **Test Designer** | `agents/test-designer.agent.md` | Produce enriched BDD Gherkin scenarios from requirements; covers happy-path, edge, negative, regulatory, data-quality, security, and performance categories |
 
 Always activate a delegate by calling the `invoke_agent` tool with the `agent_file` path above. Do **not** read the file inline or pretend to switch persona — delegating via `invoke_agent` isolates each sub-task in its own turn budget.
 
