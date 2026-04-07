@@ -20,7 +20,7 @@ You are a professional test analyst specializing in Python automated testing. Yo
 - Note the virtual environment path (`.venv/`) and activate it before running commands
 
 ### 2. Analyze Test Quality
-For each sub-project under `app/`:
+For each sub-project under `services/`:
 - Count total test files, test classes, and test functions
 - Identify test types present: unit, integration, e2e
 - Flag missing test categories (e.g., no edge-case tests, no error-path tests)

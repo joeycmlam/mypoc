@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$(cd "$SCRIPT_DIR/../../../app/jira-cli" && pwd)"
+CLI_DIR="$(cd "$SCRIPT_DIR/../../../../jira-cli" && pwd)"
 
 echo "==> Setting up jira-cli at: $CLI_DIR"
 
@@ -42,4 +42,4 @@ echo "==> Setup complete!"
 echo ""
 echo "    Activate:  source $CLI_DIR/.venv/bin/activate"
 echo "    Run:       python $CLI_DIR/jira_cli.py PROJECT-123"
-echo "    Pipe:      python $CLI_DIR/jira_cli.py PROJECT-123 | python app/copilot-agent/agent.py -a app/copilot-agent/agents/jira-reader.md -m gpt-4o"
+echo "    Pipe:      python $CLI_DIR/jira_cli.py PROJECT-123 | python services/copilot-agent/agent.py -a services/copilot-agent/agents/jira-reader.md -m gpt-4o"

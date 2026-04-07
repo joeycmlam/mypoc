@@ -91,7 +91,6 @@ mypoc/
 
 ## Decisions
 
-- `json-validator` → **delete**
 - `lib/` → **create as part of this task**
 - `packages/` directory → **not needed** (json-validator removed)
 - Python projects naming convention → **`services/`** for backend services

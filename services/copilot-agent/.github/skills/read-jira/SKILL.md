@@ -23,7 +23,7 @@ Run this from the repo root — creates the venv and installs dependencies:
 bash .github/skills/read-jira/setup.sh
 ```
 
-Then fill in credentials in `app/jira-cli/.env`:
+Then fill in credentials in `services/jira-cli/.env`:
 
 | Variable | Value |
 |---|---|
@@ -42,20 +42,20 @@ If none provided, ask: *"Which Jira issue key would you like me to fetch?"*
 **A) Read and display only** — fetch and show the structured Markdown:
 
 ```bash
-cd app/jira-cli && source .venv/bin/activate
+cd services/jira-cli && source .venv/bin/activate
 python jira_cli.py PROJECT-123
 ```
 
 **B) Read and analyze with AI** — pipe into copilot-agent for AI analysis:
 
 ```bash
-python app/jira-cli/jira_cli.py PROJECT-123 | python app/copilot-agent/agent.py -a app/copilot-agent/agents/jira-reader.md -m gpt-4o
+python services/jira-cli/jira_cli.py PROJECT-123 | python services/copilot-agent/agent.py -a services/copilot-agent/agents/jira-reader.md -m gpt-4o
 ```
 
 **C) Interactive AI analysis** — fetch first, then start a conversation:
 
 ```bash
-python app/jira-cli/jira_cli.py PROJECT-123 | python app/copilot-agent/agent.py -a app/copilot-agent/agents/jira-reader.md -m gpt-4o --interactive
+python services/jira-cli/jira_cli.py PROJECT-123 | python services/copilot-agent/agent.py -a services/copilot-agent/agents/jira-reader.md -m gpt-4o --interactive
 ```
 
 ### Step 3 — Command options
@@ -87,7 +87,7 @@ Any Python script in this monorepo can use `jira_cli.py` via subprocess or stdin
 ```python
 import subprocess
 result = subprocess.run(
-    ["python", "app/jira-cli/jira_cli.py", "PROJECT-123", "--no-attachments"],
+    ["python", "services/jira-cli/jira_cli.py", "PROJECT-123", "--no-attachments"],
     capture_output=True, text=True
 )
 jira_markdown = result.stdout
@@ -97,7 +97,7 @@ jira_markdown = result.stdout
 
 | Error | Fix |
 |---|---|
-| `Missing required environment variable(s)` | Fill in `app/jira-cli/.env` — see First-Time Setup |
+| `Missing required environment variable(s)` | Fill in `services/jira-cli/.env` — see First-Time Setup |
 | `Error connecting to Jira` | Check `JIRA_URL` format and network access |
 | `ModuleNotFoundError` | Run `bash .github/skills/read-jira/setup.sh` |
 | `JIRAError: Issue does not exist` | Verify issue key and account permissions |

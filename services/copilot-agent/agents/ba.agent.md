@@ -43,7 +43,7 @@ Always activate a delegate by calling the `invoke_agent` tool with the `agent_fi
 **1a.** Run the Jira CLI via `bash_exec` (replace `<TICKET_ID>` with the argument):
 
 ```bash
-cd /Users/joeylam/repo/mypoc/app && \
+cd /Users/joeylam/repo/mypoc/services && \
   python jira-cli/jira_cli.py <TICKET_ID>
 ```
 
@@ -168,7 +168,7 @@ Write the complete requirements back to the Jira ticket using the two write comm
 **5a. Update the description** — replace the ticket description with the full BRD drafted in Step 3. Pass the text via stdin using `-`:
 
 ```bash
-cd /Users/joeylam/repo/mypoc/app && \
+cd /Users/joeylam/repo/mypoc/services && \
   python jira-cli/jira_cli.py <TICKET_ID> --update-description - <<'ENDDESC'
 <full BRD text from Step 3>
 ENDDESC
@@ -177,7 +177,7 @@ ENDDESC
 **5b. Add a summary comment** — post a comment listing the open questions from Step 4:
 
 ```bash
-cd /Users/joeylam/repo/mypoc/app && \
+cd /Users/joeylam/repo/mypoc/services && \
   python jira-cli/jira_cli.py <TICKET_ID> --add-comment - <<'ENDCMT'
 **BA Analysis Complete**
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { User, Bot, Terminal, Clock } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/lib/types";
 
@@ -70,7 +72,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
             message.isStreaming && "cursor-blink"
           )}
         >
-          {message.content || (
+          {message.content ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+          ) : (
             <span className="text-muted-foreground italic">Thinking...</span>
           )}
         </div>
