@@ -9,6 +9,8 @@ RUN pip install --no-cache-dir build
 # Copy only what is needed to build the wheel
 COPY pyproject.toml README.md requirements.txt ./
 COPY agent.py ./
+COPY agent_copilot.py ./
+COPY api_server.py ./
 COPY agents/ ./agents/
 
 # Build the wheel
@@ -35,6 +37,9 @@ USER appuser
 # GITHUB_TOKEN must be supplied at runtime (e.g. -e GITHUB_TOKEN=...)
 ENV GITHUB_TOKEN=""
 
+EXPOSE 8000
+
 # Default: run the CLI with no arguments (prints help)
 ENTRYPOINT ["copilot-agent"]
 CMD ["--help"]
+# To run as API: docker run -p 8000:8000 <image> uvicorn api_server:app --host 0.0.0.0 --port 8000

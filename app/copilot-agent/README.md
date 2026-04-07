@@ -94,6 +94,123 @@ python agent_copilot.py -a agents/assistant.md -m gpt-4o-mini -i "Hello"
 
 ---
 
+## api_server.py — REST API / SSE Mode
+
+`api_server.py` exposes `AgentRunner` as a **FastAPI HTTP service**, supporting both a blocking JSON endpoint and a real-time Server-Sent Events (SSE) streaming endpoint. It reuses the same `AgentConfig`, `AgentRunner`, `BashTool`, and `WorkflowAnalyser` logic from `agent_copilot.py` unchanged.
+
+### Setup
+
+Requires the same virtual environment as `agent_copilot.py`. The extra dependencies (`fastapi`, `uvicorn`) are already included in `requirements.txt`.
+
+```bash
+cd app/copilot-agent
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Starting the server
+
+```bash
+# Direct
+python api_server.py
+
+# With options
+python api_server.py --host 127.0.0.1 --port 8000 --reload
+
+# Via installed entry point (after pip install -e .)
+agent-api --port 8000
+```
+
+The server starts on `http://0.0.0.0:8000` by default.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness check → `{"status":"ok"}` |
+| `GET` | `/agents` | List available `.md` agent files → `{"agents":[...]}` |
+| `POST` | `/run` | Blocking run — waits for completion, returns `{"content":"..."}` |
+| `POST` | `/stream` | SSE streaming — emits `data:` events in real time |
+
+### Request body (`POST /run` and `POST /stream`)
+
+```json
+{
+  "agent_file": "agents/assistant.md",
+  "instruction": "Explain recursion",
+  "model": "gpt-4o",
+  "max_turns": 20,
+  "extra_context": ""
+}
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `agent_file` | yes | — | Relative path to an agent `.md` file |
+| `instruction` | yes | — | The user prompt / task |
+| `model` | no | `gpt-4o` | Any model available via the Copilot CLI |
+| `max_turns` | no | `20` | Turn budget (capped at 50) |
+| `extra_context` | no | `""` | Optional extra text prepended to the first message |
+
+### SSE event types (`POST /stream`)
+
+Each line is a `data: <JSON>\n\n` event:
+
+| `type` | Payload | Description |
+|--------|---------|-------------|
+| `chunk` | `{"type":"chunk","content":"..."}` | Incremental assistant text delta |
+| `tool` | `{"type":"tool","name":"..."}` | Tool invocation started (observability) |
+| `done` | `{"type":"done","content":"..."}` | Final complete response; stream ends |
+| `error` | `{"type":"error","message":"..."}` | Unhandled exception during the run |
+
+### Examples
+
+**Health check**
+```bash
+curl http://localhost:8000/health
+```
+
+**List agents**
+```bash
+curl http://localhost:8000/agents
+```
+
+**Blocking run**
+```bash
+curl -X POST http://localhost:8000/run \
+  -H "Content-Type: application/json" \
+  -d '{"agent_file":"agents/assistant.md","instruction":"what is 2+2","model":"gpt-4o"}'
+```
+
+**SSE streaming run** (chunks appear in real time)
+```bash
+curl -N -X POST http://localhost:8000/stream \
+  -H "Content-Type: application/json" \
+  -d '{"agent_file":"agents/assistant.md","instruction":"what is 2+2","model":"gpt-4o"}'
+```
+
+**BA workflow via API with extra context**
+```bash
+curl -X POST http://localhost:8000/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_file": "agents/ba.agent.md",
+    "instruction": "please analyze the jira SCRUM-12",
+    "model": "gpt-4o",
+    "max_turns": 40
+  }'
+```
+
+### Docker — API mode
+
+The default `ENTRYPOINT` remains the CLI. To run as an API server:
+
+```bash
+docker run -p 8000:8000 <image> uvicorn api_server:app --host 0.0.0.0 --port 8000
+```
+
+---
+
 ## agent.py — GitHub Models Edition
 
 Built on the **[azure-ai-inference](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-inference)** Python SDK. Authenticate with a GitHub personal access token to access any model on the GitHub Marketplace.
@@ -221,11 +338,12 @@ cd app/copilot-agent
 pip install -e .
 ```
 
-This registers two console entry points so you can run the agents from anywhere in your shell:
+This registers three console entry points so you can run the agents from anywhere in your shell:
 
 ```bash
 copilot-agent -a agents/assistant.md -m gpt-4o -i "Hello"   # → agent.py
 agent-copilot -a agents/assistant.md -m gpt-4o -i "Hello"   # → agent_copilot.py
+agent-api --port 8000                                        # → api_server.py
 ```
 
 ### Build a distributable wheel
@@ -260,4 +378,5 @@ pip install dist/copilot_agent-1.0.0-py3-none-any.whl
 | Python requirement | `>=3.9` |
 | Entry point `copilot-agent` | `agent:main` (`agent.py`) |
 | Entry point `agent-copilot` | `agent_copilot:main` (`agent_copilot.py`) |
-| Bundled modules | `agent`, `agent_copilot` |
+| Entry point `agent-api` | `api_server:cli_main` (`api_server.py`) |
+| Bundled modules | `agent`, `agent_copilot`, `api_server` |

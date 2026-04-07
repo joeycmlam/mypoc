@@ -1,2 +1,4 @@
 azure-ai-inference>=1.0.0b9
 github-copilot-sdk
+fastapi>=0.111
+uvicorn[standard]>=0.29

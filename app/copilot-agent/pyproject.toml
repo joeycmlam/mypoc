@@ -12,14 +12,17 @@ requires-python = ">=3.9"
 dependencies = [
     "azure-ai-inference>=1.0.0b9",
     "github-copilot-sdk",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
 ]
 
 [project.scripts]
 copilot-agent = "agent:main"
 agent-copilot = "agent_copilot:main"
+agent-api = "api_server:cli_main"
 
 [tool.setuptools]
-py-modules = ["agent", "agent_copilot"]
+py-modules = ["agent", "agent_copilot", "api_server"]
 include-package-data = true
 
 [tool.setuptools.data-files]
