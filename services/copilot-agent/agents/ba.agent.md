@@ -47,11 +47,14 @@ Always activate a delegate by calling the `invoke_agent` tool with the `agent_fi
 
 ### Step 1 — Fetch & Parse the Jira Ticket
 
-**1a.** Run the Jira CLI via `bash_exec` (replace `<TICKET_ID>` with the argument):
+**1a.** Run the Jira CLI via `bash_exec` (replace `<TICKET_ID>` with the argument).
+
+> **Path derivation**: `agent_copilot.py` (and therefore `bash_exec`) always runs from the `services/copilot-agent/` directory. From there, `../jira-cli/jira_cli.py` is the correct relative path. Do **NOT** prepend `cd /workspace`, `cd ~`, or any other directory change — the relative path already works without any `cd`.
+
+> **CLI failure rule**: If the command exits non-zero or produces no output, **stop immediately**. Report the exact error to the user. Do **NOT** attempt to locate `jira_cli.py` via `find`, `ls`, or any filesystem discovery command — this is prohibited (see Constraints).
 
 ```bash
-cd /Users/joeylam/repo/mypoc/services && \
-  python jira-cli/jira_cli.py <TICKET_ID>
+python "../jira-cli/jira_cli.py" <TICKET_ID>
 ```
 
 **1b.** Delegate analysis to the Jira Reader sub-agent via `invoke_agent`:
@@ -138,7 +141,7 @@ Cover at minimum:
 #### 3.4 Acceptance Criteria
 
 Delegate to the Test Designer sub-agent via `invoke_agent`:
-- `agent_file`: `agents/test-designer.md`
+- `agent_file`: `agents/test-designer.agent.md`
 - `context`: the functional requirements from §3.2, NFRs from §3.3, and the ticket summary
 - `instruction`: "Using the provided functional requirements (do NOT re-fetch the Jira ticket and do NOT execute any shell commands or filesystem searches), produce a comprehensive BDD Gherkin scenario set covering: happy-path, edge cases (asset management boundary values: zero-weight positions, 100% allocation, fractional shares, FX cross rates), negative cases (invalid ISINs, breached compliance rules, insufficient cash, stale prices), regulatory (MiFID II, UCITS, AIFMD, SEC as applicable), data-quality, security (entitlements, four-eyes approval, audit trail), and performance (batch SLAs, EOD NAV cut-off times, real-time latency). Format each scenario as: Scenario / Given / When / Then / Tags / Priority / Source."
 
@@ -170,13 +173,12 @@ List every ambiguity, missing piece, or assumption that requires business confir
 
 > **OPTIONAL — only perform this step when the user explicitly requests a Jira update.** If requested and the CLI fails, output the full update text for manual copy-paste and say so clearly.
 
-Write the complete requirements back to the Jira ticket using the two write commands below. Run them from `app/` as the working directory.
+Write the complete requirements back to the Jira ticket using the write commands below. All commands use the same path derivation as Step 1a: run from the workspace root; `jira_cli.py` is at `../jira-cli/jira_cli.py`.
 
 **5a. Update the description** — replace the ticket description with the full BRD drafted in Step 3. Pass the text via stdin using `-`:
 
 ```bash
-cd /Users/joeylam/repo/mypoc/services && \
-  python jira-cli/jira_cli.py <TICKET_ID> --update-description - <<'ENDDESC'
+python "../jira-cli/jira_cli.py" <TICKET_ID> --update-description - <<'ENDDESC'
 <full BRD text from Step 3>
 ENDDESC
 ```
@@ -184,8 +186,7 @@ ENDDESC
 **5b. Add a summary comment** — post a comment listing the open questions from Step 4:
 
 ```bash
-cd /Users/joeylam/repo/mypoc/services && \
-  python jira-cli/jira_cli.py <TICKET_ID> --add-comment - <<'ENDCMT'
+python "../jira-cli/jira_cli.py" <TICKET_ID> --add-comment - <<'ENDCMT'
 **BA Analysis Complete**
 
 Business requirements have been drafted and added to the ticket description.
@@ -198,6 +199,22 @@ ENDCMT
 ```
 
 Both commands print a confirmation to stderr on success and exit non-zero on failure.
+
+**5c. Transition the ticket** *(optional — skip if no status change is needed)*:
+
+First list available transitions:
+
+```bash
+python "../jira-cli/jira_cli.py" <TICKET_ID> --list-transitions
+```
+
+Then move to the appropriate status (e.g. `In Review`, `Ready for Dev`):
+
+```bash
+python "../jira-cli/jira_cli.py" <TICKET_ID> --transition "In Review"
+```
+
+Only perform this step when the user explicitly requests a status change.
 
 ---
 
@@ -219,6 +236,7 @@ Produce a final summary table:
 
 ## Constraints
 
+- DO NOT run filesystem-wide discovery commands (`find /`, `find ~`, `ls /`, `ls ~/`, `ls /workspace`, or any search from the filesystem root). If the Jira CLI cannot be reached via the path derived from this agent file's location, report the error and halt — do not improvise alternative paths.
 - DO NOT invent regulatory citations — only reference regulations that are clearly applicable given the asset management context of the ticket.
 - DO NOT write test code or test scripts directly — delegate that work to the Test Designer or Jira Test Automator personas.
 - DO NOT modify any source code files.

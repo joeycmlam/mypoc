@@ -603,6 +603,13 @@ Prerequisites:
 
         self.check_sdk()
         system_prompt = self.load_agent_file(args.agent_file)
+        # Inject the real working directory so the LLM never guesses /workspace
+        cwd = Path.cwd()
+        system_prompt += (
+            f"\n\n> **Runtime working directory (injected)**: "
+            f"All `bash_exec` commands execute from `{cwd}`. "
+            "Use paths relative to this directory. Do NOT use `cd /workspace` or any absolute prefix."
+        )
         config = AgentConfig(
             system_prompt=system_prompt,
             model=args.model,

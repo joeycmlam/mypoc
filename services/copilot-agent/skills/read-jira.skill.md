@@ -61,11 +61,23 @@ python services/jira-cli/jira_cli.py PROJECT-123 | python services/copilot-agent
 
 ### Step 3 — Command options
 
+**Read flags:**
+
 | Flag | Purpose |
 |---|---|
 | `--output FILE` | Save Markdown to a file |
 | `--no-attachments` | Skip downloading attachments (list filenames only) |
 | `--comments-limit N` | Show only the last N comments |
+
+**Write flags:**
+
+| Flag | Purpose |
+|---|---|
+| `--add-comment TEXT\|-` | Add a comment; use `-` to read from stdin |
+| `--update-description TEXT\|-` | Replace the issue description; use `-` to read from stdin |
+| `--attach-file PATH` | Upload a local file as an attachment |
+| `--list-transitions` | List all available workflow transitions (outputs a Markdown table) |
+| `--transition NAME_OR_ID` | Move the issue to a new status by name (case-insensitive) or numeric ID |
 
 ### Step 4 — Present the output
 

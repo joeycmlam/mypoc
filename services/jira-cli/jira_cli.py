@@ -18,6 +18,8 @@ Usage (write):
   python jira_cli.py PROJECT-123 --update-description "New description"
   python jira_cli.py PROJECT-123 --update-description -     # read description from stdin
   python jira_cli.py PROJECT-123 --attach-file path/to/file.feature  # upload a file as an attachment
+  python jira_cli.py PROJECT-123 --list-transitions          # show available workflow transitions
+  python jira_cli.py PROJECT-123 --transition "In Progress"  # move issue to a new status by name or ID
 
 Required environment variables (or .env file):
   JIRA_URL        — Jira base URL, e.g. https://yourorg.atlassian.net
@@ -214,6 +216,66 @@ def attach_file(jira: JIRA, issue_key: str, file_path: str) -> None:
         sys.exit(1)
 
 
+def list_transitions(jira: JIRA, issue_key: str) -> None:
+    """Print all available workflow transitions for an issue to stdout."""
+    try:
+        transitions = jira.transitions(issue_key)
+    except JIRAError as exc:
+        console.print(f"[red]Error fetching transitions for {issue_key}:[/red] {exc.text}", highlight=False)
+        sys.exit(1)
+
+    if not transitions:
+        sys.stdout.write(f"No transitions available for {issue_key}.\n")
+        return
+
+    lines = [
+        f"## Available transitions for {issue_key}",
+        "",
+        "| ID | Name | To Status |",
+        "|---|---|---|",
+    ]
+    for t in transitions:
+        to_status = t.get("to", {}).get("name", "—")
+        lines.append(f"| {t['id']} | {t['name']} | {to_status} |")
+    lines.append("")
+    sys.stdout.write("\n".join(lines) + "\n")
+
+
+def transition_issue(jira: JIRA, issue_key: str, transition_name_or_id: str) -> None:
+    """Transition an issue to a new workflow status by transition name or ID."""
+    try:
+        available = jira.transitions(issue_key)
+    except JIRAError as exc:
+        console.print(f"[red]Error fetching transitions for {issue_key}:[/red] {exc.text}", highlight=False)
+        sys.exit(1)
+
+    # Resolve by ID first (exact match), then case-insensitive name match.
+    matched = next(
+        (t for t in available if t["id"] == transition_name_or_id),
+        None,
+    ) or next(
+        (t for t in available if t["name"].lower() == transition_name_or_id.lower()),
+        None,
+    )
+
+    if matched is None:
+        names = ", ".join(f'"{t["name"]}" (id={t["id"]})' for t in available)
+        console.print(
+            f"[red]Error:[/red] Transition {transition_name_or_id!r} not found for {issue_key}.\n"
+            f"Available: {names}",
+            highlight=False,
+        )
+        sys.exit(1)
+
+    try:
+        jira.transition_issue(issue_key, matched["id"])
+        to_status = matched.get("to", {}).get("name", matched["name"])
+        console.print(f"[green]Transitioned[/green] {issue_key} → {to_status}")
+    except JIRAError as exc:
+        console.print(f"[red]Error transitioning {issue_key}:[/red] {exc.text}", highlight=False)
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------------------
 # Main formatter
 # ---------------------------------------------------------------------------
@@ -385,6 +447,9 @@ def main() -> None:
               python jira_cli.py PROJECT-123 --update-description "New description text"
               python jira_cli.py PROJECT-123 --update-description -
               python jira_cli.py PROJECT-123 --attach-file tests/scrum_12.feature
+              python jira_cli.py PROJECT-123 --list-transitions
+              python jira_cli.py PROJECT-123 --transition "In Progress"
+              python jira_cli.py PROJECT-123 --transition 31
         """),
     )
     parser.add_argument("issue_key", help="Jira issue key, e.g. PROJECT-123")
@@ -421,6 +486,16 @@ def main() -> None:
         help="Upload a local file as an attachment to the issue.",
     )
     parser.add_argument(
+        "--list-transitions",
+        action="store_true",
+        help="List all available workflow transitions for the issue and exit.",
+    )
+    parser.add_argument(
+        "--transition",
+        metavar="NAME_OR_ID",
+        help="Transition the issue to a new status. Accepts a transition name (case-insensitive) or numeric ID.",
+    )
+    parser.add_argument(
         "--env-file",
         metavar="PATH",
         default=".env",
@@ -442,8 +517,14 @@ def main() -> None:
         args.add_comment is not None
         or args.update_description is not None
         or args.attach_file is not None
+        or args.list_transitions
+        or args.transition is not None
     )
     if write_requested:
+        if args.list_transitions:
+            list_transitions(jira, issue_key)
+        if args.transition is not None:
+            transition_issue(jira, issue_key, args.transition)
         if args.update_description is not None:
             update_description(jira, issue_key, _read_text_arg(args.update_description))
         if args.add_comment is not None:
