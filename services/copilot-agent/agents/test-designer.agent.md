@@ -1,6 +1,13 @@
 ---
-description: "Use when: designing test scenarios from a Jira ticket in asset management; producing BDD Gherkin test scenarios from requirements; QA analysis for OMS, fund accounting, NAV calculation, compliance, risk, or reporting features; test case design for portfolio management, trade execution, or settlement; generating structured test scenario sets from stories or bugs in investment management."
+id: test-designer
 name: "Test Designer"
+description: "Use when: designing test scenarios from a Jira ticket in asset management; producing BDD Gherkin test scenarios from requirements; QA analysis for OMS, fund accounting, NAV calculation, compliance, risk, or reporting features; test case design for portfolio management, trade execution, or settlement; generating structured test scenario sets from stories or bugs in investment management."
+triggers:
+  - "design.*test.*scenario|test.*scenario.*from"
+  - "bdd.*scenario|gherkin.*scenario|feature.*file.*from"
+  - "test.*case.*jira|scenario.*from.*ticket"
+  - "QA analysis|produce.*test.*scenario"
+skills: [bdd-scenarios]
 tools: [read, search, agent]
 agents: []
 user-invocable: true

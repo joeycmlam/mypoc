@@ -33,7 +33,7 @@ gh auth login
 ### Setup
 
 ```bash
-cd app/copilot-agent
+cd services/copilot-agent
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -43,6 +43,7 @@ pip install -r requirements.txt
 
 ```
 python agent_copilot.py -a <agent-file> -m <model> [-i <instruction>] [--interactive] [--no-stream] [--max-turns N]
+python agent_copilot.py -a agents/ba.agent.md -m gpt-4o -i "Please provivde the analysis of JIRA https://joeycmlam-1762529818344.atlassian.net/browse/SCRUM-9"
 ```
 
 #### Arguments
@@ -103,7 +104,7 @@ python agent_copilot.py -a agents/assistant.md -m gpt-4o-mini -i "Hello"
 Requires the same virtual environment as `agent_copilot.py`. The extra dependencies (`fastapi`, `uvicorn`) are already included in `requirements.txt`.
 
 ```bash
-cd app/copilot-agent
+cd services/copilot-agent
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -128,7 +129,8 @@ The server starts on `http://0.0.0.0:8000` by default.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Liveness check → `{"status":"ok"}` |
-| `GET` | `/agents` | List available `.md` agent files → `{"agents":[...]}` |
+| `GET` | `/agents` | List registered agents (id, name, description, skills, tools) + all `.md` files |
+| `GET` | `/skills` | List registered skills (id, name, description) |
 | `POST` | `/run` | Blocking run — waits for completion, returns `{"content":"..."}` |
 | `POST` | `/stream` | SSE streaming — emits `data:` events in real time |
 
@@ -175,6 +177,11 @@ curl http://localhost:8000/health
 curl http://localhost:8000/agents
 ```
 
+**List skills**
+```bash
+curl http://localhost:8000/skills
+```
+
 **Blocking run**
 ```bash
 curl -X POST http://localhost:8000/run \
@@ -218,7 +225,7 @@ Built on the **[azure-ai-inference](https://github.com/Azure/azure-sdk-for-pytho
 ### Setup
 
 ```bash
-cd app/copilot-agent
+cd services/copilot-agent
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -299,17 +306,36 @@ Notable ones include:
 
 ## Agent Files
 
-Agent files are plain text or Markdown files that become the **system prompt**.
+Agent files (`agents/*.agent.md`) are Markdown files with YAML frontmatter that define the **system prompt** and routing metadata used by the `AgentRegistry`.
+
+### ATAF Frontmatter Schema
+
+```yaml
+---
+id: my-agent              # unique ID used by the registry
+name: "My Agent"          # human-readable display name
+description: "..."        # shown in /agents; used for routing hints
+triggers:                 # regex patterns matched against user input
+  - "pattern one|variant"
+  - "another pattern"
+skills: [bdd-scenarios]   # skill IDs injected into context
+tools: [read, search, edit, execute, agent]
+argument-hint: "..."      # hint shown in the UI
+---
+```
+
+### Bundled Agents
 
 ```
 agents/
   assistant.md                  # General-purpose assistant
   coder.md                      # Software engineering focused
-  ba.agent.md                   # Business analyst — Jira analysis & requirements
   jira-reader.md                # Reads and summarises Jira issues
+  ba.agent.md                   # Business analyst — Jira analysis & requirements
   jira-test-automator.agent.md  # Generates automated tests from Jira stories
-  playwright-tester.agent.md    # Playwright end-to-end test authoring
-  test-designer.md              # Test plan and test case design
+  test-designer.agent.md        # BDD test scenario design from requirements
+  test-analyst.agent.md         # Test coverage analysis and mutation testing
+  e2e-tester.md                 # Playwright end-to-end test authoring
 ```
 
 Create your own for any persona or task:
@@ -327,6 +353,39 @@ python agent_copilot.py -a agents/data_scientist.md -m gpt-4o -i "Plot a sine wa
 
 ---
 
+## Skill Files
+
+Skills (`skills/*.skill.md`) are reusable knowledge documents loaded by `SkillRegistry` at startup. Agents declare which skills they use via the `skills:` frontmatter key.
+
+### ATAF Frontmatter Schema
+
+```yaml
+---
+id: bdd-pytest            # unique ID referenced by agents
+name: bdd-pytest          # human-readable name
+description: "..."        # shown in /skills
+argument-hint: "..."      # hint shown in the UI
+---
+```
+
+### Bundled Skills
+
+| ID | Description |
+|----|-------------|
+| `bdd-scenarios` | Gherkin scenario authoring guide |
+| `bdd-pytest` | pytest-bdd feature files and step definitions |
+| `bdd-playwright` | Playwright BDD with `playwright-bdd` |
+| `bdd-cucumber-node` | Cucumber.js BDD for Node.js / TypeScript |
+| `read-jira` | Fetching and analysing Jira issues via `jira-cli` |
+
+Check registered skills at runtime:
+
+```bash
+curl http://localhost:8000/skills
+```
+
+---
+
 ## Packaging
 
 The project uses `pyproject.toml` with `setuptools` as the build backend.
@@ -334,7 +393,7 @@ The project uses `pyproject.toml` with `setuptools` as the build backend.
 ### Install as an editable package (development)
 
 ```bash
-cd app/copilot-agent
+cd services/copilot-agent
 pip install -e .
 ```
 
@@ -349,7 +408,7 @@ agent-api --port 8000                                        # → api_server.py
 ### Build a distributable wheel
 
 ```bash
-cd app/copilot-agent
+cd services/copilot-agent
 pip install build
 python -m build
 ```
@@ -379,4 +438,4 @@ pip install dist/copilot_agent-1.0.0-py3-none-any.whl
 | Entry point `copilot-agent` | `agent:main` (`agent.py`) |
 | Entry point `agent-copilot` | `agent_copilot:main` (`agent_copilot.py`) |
 | Entry point `agent-api` | `api_server:cli_main` (`api_server.py`) |
-| Bundled modules | `agent`, `agent_copilot`, `api_server` |
+| Bundled modules | `agent`, `agent_copilot`, `api_server`, `registry` |

@@ -4,7 +4,8 @@ FastAPI HTTP service wrapping AgentRunner from agent_copilot.py.
 
 Endpoints:
   GET  /health  — liveness check
-  GET  /agents  — list available agent .md files
+  GET  /agents  — list registered agents (from AgentRegistry) + all .md files
+  GET  /skills  — list registered skills (from SkillRegistry)
   POST /run     — blocking run, returns {"content": "..."}
   POST /stream  — SSE streaming run
 
@@ -27,11 +28,16 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from agent_copilot import AgentConfig, AgentRunner, CLI
+from registry import AgentRegistry, SkillRegistry
 
 _here = Path(__file__).parent
 AGENTS_DIR = _here / "agents"
+SKILLS_DIR = _here / "skills"
 
 app = FastAPI(title="Copilot Agent API", version="1.0.0")
+
+agent_registry = AgentRegistry(AGENTS_DIR)
+skill_registry = SkillRegistry(SKILLS_DIR)
 
 app.add_middleware(
     CORSMiddleware,
@@ -87,10 +93,24 @@ async def health():
 
 @app.get("/agents")
 async def list_agents():
-    if not AGENTS_DIR.exists():
-        return {"agents": []}
-    files = sorted(p.name for p in AGENTS_DIR.glob("*.md"))
-    return {"agents": files}
+    registered = [
+        {"id": a.id, "name": a.name, "description": a.description,
+         "skills": a.skills, "tools": a.tools}
+        for a in agent_registry.all().values()
+    ]
+    # also surface unregistered .md files for backward compatibility
+    all_files = sorted(p.name for p in AGENTS_DIR.glob("*.md")) if AGENTS_DIR.exists() else []
+    return {"agents": registered, "files": all_files}
+
+
+@app.get("/skills")
+async def list_skills():
+    return {
+        "skills": [
+            {"id": s.id, "name": s.name, "description": s.description}
+            for s in skill_registry.all().values()
+        ]
+    }
 
 
 @app.post("/run")

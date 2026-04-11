@@ -1,6 +1,13 @@
 ---
-description: "Use when: generating automated test scenarios or test code from a Jira ticket; creating pytest or BDD test scripts from requirements; automating test case creation from stories or bugs; test automation from Jira issue; turning acceptance criteria into runnable tests."
+id: jira-test-automator
 name: "Jira Test Automator"
+description: "Use when: generating automated test scenarios or test code from a Jira ticket; creating pytest or BDD test scripts from requirements; automating test case creation from stories or bugs; test automation from Jira issue; turning acceptance criteria into runnable tests."
+triggers:
+  - "generate.*test.*jira|automate.*test.*jira"
+  - "test automation.*jira|jira.*test automation"
+  - "test.*from.*ticket|automated.*test.*from.*scrum"
+  - "create.*test.*from.*issue|runnable tests.*from"
+skills: [bdd-scenarios, bdd-pytest]
 tools: [read, search, edit, agent]
 argument-hint: "Jira ticket ID (e.g. SCRUM-42)"
 ---

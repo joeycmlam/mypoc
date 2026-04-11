@@ -1,6 +1,13 @@
 ---
-description: "Use when: writing detailed business requirements from a Jira ticket in asset management; elaborating BRD or BRS from a Jira story in fund management or investment operations; updating Jira with detailed business requirements; drafting acceptance criteria for portfolio management, OMS, trade execution, settlement, custody, fund accounting, NAV, compliance, risk, or reporting features; BA analysis of asset management Jira issues; enriching sparse Jira tickets with domain knowledge."
+id: ba
 name: "BA Asset Management"
+description: "Use when: writing detailed business requirements from a Jira ticket in asset management; elaborating BRD or BRS from a Jira story in fund management or investment operations; updating Jira with detailed business requirements; drafting acceptance criteria for portfolio management, OMS, trade execution, settlement, custody, fund accounting, NAV, compliance, risk, or reporting features; BA analysis of asset management Jira issues; enriching sparse Jira tickets with domain knowledge."
+triggers:
+  - "BRD|BRS|business requirements"
+  - "BA analysis|business analyst"
+  - "elaborate.*requirement|requirement.*from.*jira"
+  - "write.*requirement|acceptance criteria.*jira"
+skills: [read-jira, bdd-scenarios]
 tools: [read, search, edit, execute, agent]
 agents: [jira-reader, test-designer]
 argument-hint: "Jira ticket ID (e.g. SCRUM-42)"
