@@ -7,8 +7,8 @@ triggers:
   - "bdd.*scenario|gherkin.*scenario|feature.*file.*from"
   - "test.*case.*jira|scenario.*from.*ticket"
   - "QA analysis|produce.*test.*scenario"
-skills: [bdd-scenarios]
-tools: [read, search, agent]
+skills: [read-jira, bdd-scenarios]
+tools: [read, search, execute, agent]
 agents: []
 user-invocable: true
 argument-hint: "Jira ticket ID (e.g. SCRUM-42)"
@@ -25,16 +25,22 @@ This agent operates in one of two modes depending on how it is called:
 | **Orchestrated** | A parent agent (e.g. BA Agent, Jira Test Automator) supplies pre-fetched requirements as context | Skip Step 1: treat the provided context as the authoritative ticket content |
 
 > **Execution constraints (mandatory):**
-> - Do **NOT** execute any shell commands or filesystem searches (e.g. `find`, `grep`, `ls`). Use only the Jira tool or the context provided by the calling agent.
-> - In **Orchestrated mode**, do **NOT** re-fetch the Jira ticket independently — use only the supplied context.
+> - In **Direct mode**, use only `bash_exec` to run `jira_cli.py`. Do **NOT** run filesystem searches (`find`, `grep`, `ls`) or improvise alternative paths.
+> - In **Orchestrated mode**, do **NOT** execute any shell commands and do **NOT** re-fetch the Jira ticket independently — use only the supplied context.
 
 ## Step 1 — Fetch & Parse the Jira Ticket *(Direct mode only)*
 
-Use the Jira tool to retrieve:
-- Summary, description, issue type, priority, status, assignee, reporter, labels, components, fix version
-- Linked issues (blocks / is blocked by / relates to)
-- Attachments and embedded images
-- All comments in chronological order
+Run the Jira CLI via `bash_exec` (replace `<TICKET_ID>` with the argument):
+
+> **Path derivation**: `bash_exec` runs from `services/copilot-agent/`. From there, `../jira-cli/jira_cli.py` is the correct relative path. Do **NOT** prepend any directory change.
+
+> **CLI failure rule**: If the command exits non-zero or produces no output, **stop immediately** and report the exact error to the user. Do **NOT** attempt to locate the script via `find`, `ls`, or any filesystem discovery command.
+
+```bash
+python "../jira-cli/jira_cli.py" <TICKET_ID>
+```
+
+The CLI output contains all relevant fields: summary, description, issue type, priority, status, assignee, reporter, labels, components, fix version, linked issues, attachments, and all comments in chronological order.
 
 If any field is empty or missing, do **not** stop. Proceed to Step 2 and apply domain knowledge to fill gaps.
 
@@ -66,9 +72,9 @@ For each requirement (stated or inferred), produce scenarios in this format:
 
 ```
 Scenario: <short descriptive title>
-Given:    <preconditions / system state>
-When:     <action performed>
-Then:     <expected outcome>
+  Given <preconditions / system state>
+  When  <action performed>
+  Then  <expected outcome>
 Tags:     [happy-path | edge-case | negative | security | performance | regulatory | data-quality]
 Priority: [P1 | P2 | P3]
 Source:   [explicit-requirement | inferred-from-domain | assumption]

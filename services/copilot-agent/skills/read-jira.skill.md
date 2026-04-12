@@ -18,10 +18,10 @@ Fetch a Jira issue — description, metadata, comments, and attachments — and 
 
 ## First-Time Setup
 
-Run this from the repo root — creates the venv and installs dependencies:
+Run these commands from the repo root — creates the venv and installs dependencies:
 
 ```bash
-bash services/copilot-agent/skills/read-jira/setup.sh
+cd services/jira-cli && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 ```
 
 Then fill in credentials in `services/jira-cli/.env`:
@@ -50,13 +50,13 @@ python jira_cli.py PROJECT-123
 **B) Read and analyze with AI** — pipe into copilot-agent for AI analysis:
 
 ```bash
-python services/jira-cli/jira_cli.py PROJECT-123 | python services/copilot-agent/agent.py -a services/copilot-agent/agents/jira-reader.md -m gpt-4o
+services/jira-cli/.venv/bin/python services/jira-cli/jira_cli.py PROJECT-123 | python services/copilot-agent/agent.py -a services/copilot-agent/agents/jira-reader.md -m gpt-4o
 ```
 
 **C) Interactive AI analysis** — fetch first, then start a conversation:
 
 ```bash
-python services/jira-cli/jira_cli.py PROJECT-123 | python services/copilot-agent/agent.py -a services/copilot-agent/agents/jira-reader.md -m gpt-4o --interactive
+services/jira-cli/.venv/bin/python services/jira-cli/jira_cli.py PROJECT-123 | python services/copilot-agent/agent.py -a services/copilot-agent/agents/jira-reader.md -m gpt-4o --interactive
 ```
 
 ### Step 3 — Command options

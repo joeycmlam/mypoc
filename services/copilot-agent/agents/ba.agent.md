@@ -173,7 +173,7 @@ List every ambiguity, missing piece, or assumption that requires business confir
 
 > **OPTIONAL — only perform this step when the user explicitly requests a Jira update.** If requested and the CLI fails, output the full update text for manual copy-paste and say so clearly.
 
-Write the complete requirements back to the Jira ticket using the write commands below. All commands use the same path derivation as Step 1a: run from the workspace root; `jira_cli.py` is at `../jira-cli/jira_cli.py`.
+Write the complete requirements back to the Jira ticket using the write commands below. All commands use the same path derivation as Step 1a: `bash_exec` runs from `services/copilot-agent/`; `jira_cli.py` is at `../jira-cli/jira_cli.py`.
 
 **5a. Update the description** — replace the ticket description with the full BRD drafted in Step 3. Pass the text via stdin using `-`:
 
