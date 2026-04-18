@@ -1,0 +1,342 @@
+<mxfile host="app.diagrams.net" modified="2026-04-18" agent="Claude" version="24.0.0" type="device">
+  <diagram id="process_view" name="Process View">
+    <mxGraphModel dx="1422" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ======================================================= -->
+        <!-- TITLE BLOCK -->
+        <!-- ======================================================= -->
+        <mxCell id="title" value="Process View" style="text;html=1;fontSize=26;fontStyle=1;align=center;fontFamily=Georgia;fontColor=#1E2761;" vertex="1" parent="1">
+          <mxGeometry x="550" y="20" width="400" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="titlesub" value="Runtime processes, concurrency model, and inter-process communication" style="text;html=1;fontSize=13;align=center;fontColor=#8A94A6;" vertex="1" parent="1">
+          <mxGeometry x="400" y="56" width="700" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- ======================================================= -->
+        <!-- SECTION 1 — EXTERNAL TRIGGERS (top band) -->
+        <!-- ======================================================= -->
+        <mxCell id="trigger_band" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=2;fillColor=#F4F6FB;strokeColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="1660" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="trig_label" value="External trigger processes" style="text;html=1;fontSize=12;fontStyle=1;fontColor=#8A94A6;align=left;" vertex="1" parent="1">
+          <mxGeometry x="55" y="105" width="200" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="trig_jira" value="JIRA webhook" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F1FB;strokeColor=#2563EB;fontSize=11;fontColor=#0C447C;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="120" width="140" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="trig_gh" value="GitHub webhook" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F1FB;strokeColor=#2563EB;fontSize=11;fontColor=#0C447C;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="120" width="140" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="trig_human" value="Human API call" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F1FB;strokeColor=#2563EB;fontSize=11;fontColor=#0C447C;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="120" width="140" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="trig_sched" value="CA Scheduler cron" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F1FB;strokeColor=#2563EB;fontSize=11;fontColor=#0C447C;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="120" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="trig_nr" value="NewRelic alert" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAEEDA;strokeColor=#D97706;fontSize=11;fontColor=#633806;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="850" y="120" width="140" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- ======================================================= -->
+        <!-- SECTION 2 — INGRESS PROCESS -->
+        <!-- ======================================================= -->
+        <mxCell id="ingress_proc" value="&lt;b&gt;[P0] Ingress process&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#5F5E5A;&quot;&gt;NGINX · API Mgmt · Auth · Rate limit · Route&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=12;fontColor=#444441;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="210" width="500" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Trigger → Ingress arrows -->
+        <mxCell id="e_t1_ing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2563EB;strokeWidth=1;" edge="1" source="trig_jira" target="ingress_proc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_t2_ing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2563EB;strokeWidth=1;" edge="1" source="trig_gh" target="ingress_proc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_t3_ing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2563EB;strokeWidth=1;" edge="1" source="trig_human" target="ingress_proc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_t4_ing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2563EB;strokeWidth=1;" edge="1" source="trig_sched" target="ingress_proc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_t5_ing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D97706;strokeWidth=1;" edge="1" source="trig_nr" target="ingress_proc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ======================================================= -->
+        <!-- SECTION 3 — EVENT BUS (central async backbone) -->
+        <!-- ======================================================= -->
+        <mxCell id="ingress_proc_to_bus" value="publish event" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1.5;fontSize=9;fontColor=#16A34A;" edge="1" source="ingress_proc" target="event_bus" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="event_bus" value="&lt;b&gt;[P1] Event bus process (Kafka / Azure Event Hub)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#27500A;&quot;&gt;Topics: task.created · task.updated · agent.result · tool.callback · alert.fired&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#EAF3DE;strokeColor=#3B6D11;fontSize=12;fontColor=#27500A;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="250" y="330" width="1000" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ======================================================= -->
+        <!-- SECTION 4 — ORCHESTRATOR PROCESS -->
+        <!-- ======================================================= -->
+        <mxCell id="e_bus_orch" value="subscribe: task.created" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7C3AED;strokeWidth=1.5;fontSize=9;fontColor=#7C3AED;" edge="1" source="event_bus" target="orch_proc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="orch_proc" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=3;fillColor=#EDE9FE;strokeColor=#7C3AED;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="250" y="455" width="1000" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="orch_proc_title" value="[P2] Orchestrator process (2 replicas — active/standby)" style="text;html=1;fontSize=13;fontStyle=1;fontColor=#5B21B6;align=left;" vertex="1" parent="1">
+          <mxGeometry x="265" y="460" width="500" height="22" as="geometry"/>
+        </mxCell>
+
+        <!-- Sub-processes inside orchestrator -->
+        <mxCell id="op_planner" value="&lt;b&gt;[P2a]&lt;/b&gt; Task planner&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#8A94A6;&quot;&gt;Build DAG&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#7C3AED;fontSize=10;fontColor=#1E2761;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="495" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="op_router" value="&lt;b&gt;[P2b]&lt;/b&gt; Agent router&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#8A94A6;&quot;&gt;Select + dispatch&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#7C3AED;fontSize=10;fontColor=#1E2761;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="495" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="op_state" value="&lt;b&gt;[P2c]&lt;/b&gt; State machine&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#8A94A6;&quot;&gt;Redis-backed lifecycle&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#7C3AED;fontSize=10;fontColor=#1E2761;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="495" width="170" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="op_synth" value="&lt;b&gt;[P2d]&lt;/b&gt; Result synthesiser&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#8A94A6;&quot;&gt;Merge + report&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#7C3AED;fontSize=10;fontColor=#1E2761;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="860" y="495" width="170" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- State transitions inside orchestrator -->
+        <mxCell id="e_pa_pb" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7C3AED;strokeWidth=0.8;dashed=1;" edge="1" source="op_planner" target="op_router" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_pb_pc" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7C3AED;strokeWidth=0.8;dashed=1;" edge="1" source="op_router" target="op_state" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_pc_pd" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7C3AED;strokeWidth=0.8;dashed=1;" edge="1" source="op_state" target="op_synth" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Concurrency note inside orchestrator -->
+        <mxCell id="orch_conc_note" value="⚡ Parallel dispatch: router fires multiple agent sub-tasks concurrently via event bus (fan-out)" style="text;html=1;fontSize=9;fontStyle=2;fontColor=#7C3AED;align=center;" vertex="1" parent="1">
+          <mxGeometry x="280" y="565" width="750" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Orchestrator publishes back to bus -->
+        <mxCell id="e_orch_bus_pub" value="publish: agent.task" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1.5;fontSize=9;fontColor=#16A34A;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" source="orch_proc" target="event_bus" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="750" y="410"/>
+              <mxPoint x="750" y="385"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ======================================================= -->
+        <!-- SECTION 5 — AGENT WORKER PROCESSES (parallel) -->
+        <!-- ======================================================= -->
+        <mxCell id="agent_pool_label" value="[P3] Agent worker processes — concurrently running pods (fan-out)" style="text;html=1;fontSize=12;fontStyle=1;fontColor=#085041;align=left;" vertex="1" parent="1">
+          <mxGeometry x="55" y="670" width="600" height="22" as="geometry"/>
+        </mxCell>
+
+        <!-- Agent process template — 6 pods -->
+        <!-- BA/PO Agent -->
+        <mxCell id="ap_ba" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#CCFBF1;strokeColor=#0D9488;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="55" y="700" width="250" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_ba_t" value="[P3a] BA/PO agent" style="text;html=1;fontSize=11;fontStyle=1;fontColor=#065F56;align=center;" vertex="1" parent="1">
+          <mxGeometry x="55" y="705" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_ba_1" value="LLM reasoning loop" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="70" y="730" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_ba_2" value="Skill executor (gRPC)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="70" y="768" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_ba_3" value="MCP tool caller (JIRA, ADX)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="70" y="806" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_ba_4" value="Envoy proxy sidecar" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F4F6FB;strokeColor=#8A94A6;fontSize=9;fontColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="70" y="844" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_ba_state" value="STATE: idle | running | waiting-tool | done" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#0D9488;align=center;" vertex="1" parent="1">
+          <mxGeometry x="55" y="876" width="250" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Architect Agent -->
+        <mxCell id="ap_arch" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#CCFBF1;strokeColor=#0D9488;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="700" width="250" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_arch_t" value="[P3b] Architect agent" style="text;html=1;fontSize=11;fontStyle=1;fontColor=#065F56;align=center;" vertex="1" parent="1">
+          <mxGeometry x="330" y="705" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_arch_1" value="LLM reasoning loop" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="345" y="730" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_arch_2" value="Skill executor (gRPC)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="345" y="768" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_arch_3" value="MCP tool caller (GitHub, JIRA)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="345" y="806" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_arch_4" value="Envoy proxy sidecar" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F4F6FB;strokeColor=#8A94A6;fontSize=9;fontColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="345" y="844" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_arch_state" value="STATE: idle | running | waiting-tool | done" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#0D9488;align=center;" vertex="1" parent="1">
+          <mxGeometry x="330" y="876" width="250" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Sr. Engineer Agent -->
+        <mxCell id="ap_eng" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#CCFBF1;strokeColor=#0D9488;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="605" y="700" width="250" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_eng_t" value="[P3c] Sr. engineer agent (×2 HPA)" style="text;html=1;fontSize=11;fontStyle=1;fontColor=#065F56;align=center;" vertex="1" parent="1">
+          <mxGeometry x="605" y="705" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_eng_1" value="LLM reasoning loop" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="620" y="730" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_eng_2" value="Skill executor (gRPC)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="620" y="768" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_eng_3" value="MCP tool caller (GitHub, ADX)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="620" y="806" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_eng_4" value="Envoy proxy sidecar" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F4F6FB;strokeColor=#8A94A6;fontSize=9;fontColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="620" y="844" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_eng_state" value="STATE: idle | running | waiting-tool | done" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#0D9488;align=center;" vertex="1" parent="1">
+          <mxGeometry x="605" y="876" width="250" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- QA Agent -->
+        <mxCell id="ap_qa" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#CCFBF1;strokeColor=#0D9488;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="880" y="700" width="250" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_qa_t" value="[P3d] QA expert agent" style="text;html=1;fontSize=11;fontStyle=1;fontColor=#065F56;align=center;" vertex="1" parent="1">
+          <mxGeometry x="880" y="705" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_qa_1" value="LLM reasoning loop" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="895" y="730" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_qa_2" value="Skill executor (gRPC)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="895" y="768" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_qa_3" value="MCP tool caller (GitHub, ADX, NR)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#0D9488;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="895" y="806" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_qa_4" value="Envoy proxy sidecar" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F4F6FB;strokeColor=#8A94A6;fontSize=9;fontColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="895" y="844" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_qa_state" value="STATE: idle | running | waiting-tool | done" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#0D9488;align=center;" vertex="1" parent="1">
+          <mxGeometry x="880" y="876" width="250" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Sec Agent -->
+        <mxCell id="ap_sec" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#FAECE7;strokeColor=#993C1D;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1155" y="700" width="250" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_sec_t" value="[P3e] Security expert agent" style="text;html=1;fontSize=11;fontStyle=1;fontColor=#712B13;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1155" y="705" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_sec_1" value="LLM reasoning loop" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#993C1D;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="730" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_sec_2" value="Skill executor (gRPC)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#993C1D;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="768" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_sec_3" value="MCP tool caller (GitHub, JIRA, ADX)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#993C1D;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="806" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_sec_4" value="Envoy proxy sidecar" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F4F6FB;strokeColor=#8A94A6;fontSize=9;fontColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="844" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_sec_state" value="STATE: idle | running | waiting-tool | done" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#993C1D;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1155" y="876" width="250" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- DevOps Agent -->
+        <mxCell id="ap_devops" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#FAECE7;strokeColor=#993C1D;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1430" y="700" width="250" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_devops_t" value="[P3f] DevOps agent" style="text;html=1;fontSize=11;fontStyle=1;fontColor=#712B13;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1430" y="705" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_devops_1" value="LLM reasoning loop" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#993C1D;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1445" y="730" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_devops_2" value="Skill executor (gRPC)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#993C1D;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1445" y="768" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_devops_3" value="MCP tool caller (AKS, Snow, CA, NR)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#993C1D;fontSize=9;fontColor=#3D4663;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1445" y="806" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_devops_4" value="Envoy proxy sidecar" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F4F6FB;strokeColor=#8A94A6;fontSize=9;fontColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="1445" y="844" width="220" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ap_devops_state" value="STATE: idle | running | waiting-approval | done" style="text;html=1;fontSize=8;fontStyle=2;fontColor=#993C1D;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1430" y="876" width="250" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Event bus → agent subscribe arrows -->
+        <mxCell id="e_bus_ba" value="subscribe" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1;dashed=1;dashPattern=4 3;fontSize=8;fontColor=#16A34A;" edge="1" source="event_bus" target="ap_ba" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_bus_arch" value="subscribe" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1;dashed=1;dashPattern=4 3;fontSize=8;fontColor=#16A34A;" edge="1" source="event_bus" target="ap_arch" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_bus_eng" value="subscribe" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1;dashed=1;dashPattern=4 3;fontSize=8;fontColor=#16A34A;" edge="1" source="event_bus" target="ap_eng" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_bus_qa" value="subscribe" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1;dashed=1;dashPattern=4 3;fontSize=8;fontColor=#16A34A;" edge="1" source="event_bus" target="ap_qa" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_bus_sec" value="subscribe" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1;dashed=1;dashPattern=4 3;fontSize=8;fontColor=#16A34A;" edge="1" source="event_bus" target="ap_sec" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_bus_devops" value="subscribe" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1;dashed=1;dashPattern=4 3;fontSize=8;fontColor=#16A34A;" edge="1" source="event_bus" target="ap_devops" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Agents publish results back to bus -->
+        <mxCell id="e_ba_bus" value="publish: agent.result" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D97706;strokeWidth=1;fontSize=8;fontColor=#D97706;dashed=1;exitX=0.5;exitY=0;entryX=0.2;entryY=1;" edge="1" source="ap_ba" target="event_bus" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_eng_bus" value="publish: agent.result" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D97706;strokeWidth=1;fontSize=8;fontColor=#D97706;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" source="ap_eng" target="event_bus" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ======================================================= -->
+        <!-- SECTION 6 — SHARED SUPPORT PROCESSES -->
+        <!-- ======================================================= -->
+        <mxCell id="shared_label" value="[P4] Shared support processes" style="text;html=1;fontSize=12;fontStyle=1;fontColor=#633806;align=left;" vertex="1" parent="1">
+          <mxGeometry x="55" y="940" width="300" height="22" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="sp_llm" value="&lt;b&gt;[P4a]&lt;/b&gt; LLM gateway&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;Model routing · throttle · cost control&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#FAEEDA;strokeColor=#D97706;fontSize=10;fontColor=#633806;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="55" y="970" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_skills" value="&lt;b&gt;[P4b]&lt;/b&gt; Skill registry svc&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;gRPC · catalog · RBAC · templates&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#EDE9FE;strokeColor=#7C3AED;fontSize=10;fontColor=#5B21B6;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="970" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_vault" value="&lt;b&gt;[P4c]&lt;/b&gt; Vault agent sidecar&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;Token lease · secret rotation&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#FBEAF0;strokeColor=#DB2777;fontSize=10;fontColor=#72243E;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="565" y="970" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_audit" value="&lt;b&gt;[P4d]&lt;/b&gt; Audit sink (Fluentd)&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;Every tool call → ADX stream&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#EAF3DE;strokeColor=#3B6D11;fontSize=10;fontColor=#27500A;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="970" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_nr" value="&lt;b&gt;[P4e]&lt;/b&gt; NewRelic DaemonSet&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;APM · metrics · alerts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#FAEEDA;strokeColor=#D97706;fontSize=10;fontColor=#633806;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1075" y="970" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_hpa" value="&lt;b&gt;[P4f]&lt;/b&gt; HPA controller&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;Scale eng-pod on CPU + queue depth&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#F4F6FB;strokeColor=#8A94A6;fontSize=10;fontColor=#444441;strokeWidth=0.5;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="970" width="230" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Process interaction lines — agents to shared services -->
+        <mxCell id="e_agents_llm" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D97706;strokeWidth=0.8;dashed=1;" edge="1" source="ap_eng" target="sp_llm" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_agents_skills" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7C3AED;strokeWidth=0.8;dashed=1;" edge="1" source="ap_ba" target="sp_skills" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_agents_vault" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#DB2777;strokeWidth=0.8;dashed=1;" edge="1" source="ap_sec" target="sp_vault" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_agents_audit" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3B6D11;strokeWidth=0.8;dashed=1;" edge="1" source="ap_devops" target="sp_audit" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_agents_hpa" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#8A94A6;strokeWidth=0.8;dashed=1;" edge="1" source="sp_hpa" target="ap_eng" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ======================================================= -->
+        <!-- SECTION 7 — APPROVAL GATE PROCESS -->
+        <!-- ======================================================= -->
+        <mxCell id="approval" value="&lt;b&gt;[P5] Approval gate process&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#791F1F;&quot;&gt;High-risk actions (merge, deploy, prod-write) held until human or policy approves · timeout → reject&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#FCEBEB;strokeColor=#A32D2D;fontSize=11;fontColor=#791F1F;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="55" y="1065" width="900" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_devops_appr" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#A32D2D;strokeWidth=1.5;" edge="1" source="ap_devops" target="approval" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_sec_appr" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#A32D2D;strokeWidth=1.5;" edge="1" source="ap_sec" target="approval" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ======================================================= -->
+        <!-- LEGEND -->
+        <!-- ======================================================= -->
+        <mxCell id="leg_band" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#F4F6FB;strokeColor=#8A94A6;strokeWidth=0.5;" vertex="1" parent="1">
+          <mxGeometry x="55" y="1150" width="1350" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_title" value="Legend" style="text;html=1;fontSize=11;fontStyle=1;fontColor=#1E2761;align=left;" vertex="1" parent="1">
+          <mxGeometry x="70" y="1155" width="60" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll1" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#16A34A;strokeWidth=1.5;" edge="1" source="leg_band" target="leg_band" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="leg_l1" value="─── Green: publish to event bus" style="text;html=1;fontSize=10;fontColor=#16A34A;" vertex="1" parent="1">
+          <mxGeometry x="150" y="1168" width="220" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_l2" value="- - - Orange: subscribe / consume from bus" style="text;html=1;fontSize=10;fontColor=#D97706;" vertex="1" parent="1">
+          <mxGeometry x="395" y="1168" width="270" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_l3" value="─── Red: approval-gated call" style="text;html=1;fontSize=10;fontColor=#A32D2D;" vertex="1" parent="1">
+          <mxGeometry x="700" y="1168" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_l4" value="- - - Purple: gRPC skill resolve" style="text;html=1;fontSize=10;fontColor=#7C3AED;" vertex="1" parent="1">
+          <mxGeometry x="940" y="1168" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_l5" value="[Pn] = Process identifier" style="text;html=1;fontSize=10;fontColor=#8A94A6;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="1168" width="180" height="20" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

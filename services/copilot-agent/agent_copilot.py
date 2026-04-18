@@ -142,6 +142,22 @@ class WorkflowAnalyser:
 class BashTool:
     """Executes shell commands on behalf of the LLM."""
 
+    _MAX_COMMAND_LEN = 4096
+
+    # Blocklist for unambiguously destructive / injection-vector patterns.
+    # Defense-in-depth only — not a complete security boundary.
+    _BLOCKLIST_RE = re.compile(
+        r"rm\s+-[^\s]*r[^\s]*\s+/[^\s]*/|"          # rm -rf /<path> (recursive from root)
+        r"rm\s+-[^\s]*r[^\s]*\s+~|"                  # rm -rf ~
+        r"dd\s+.*of=/dev/[sh]d[a-z]|"                 # dd to raw disk device
+        r">\s*/dev/[sh]d[a-z]|"                        # redirect to raw disk device
+        r"mkfs\.[a-z]|"                                # reformat filesystem
+        r":\s*\(\s*\)\s*\{.*\|.*:.*\}|"              # fork bomb :(){};
+        r"curl[^|]*\|\s*(?:ba)?sh|"                   # curl | sh / curl | bash
+        r"wget[^|]*\|\s*(?:ba)?sh",                    # wget | sh / wget | bash
+        re.IGNORECASE | re.DOTALL,
+    )
+
     SCHEMA = {
         "type": "object",
         "properties": {
@@ -174,10 +190,16 @@ class BashTool:
         command = args.get("command", "")
         if not command:
             return ToolResult(text_result_for_llm="[Error: no command provided]", result_type="failure")
+        if "\x00" in command:
+            return ToolResult(text_result_for_llm="[Error: command rejected — null bytes are not permitted]", result_type="failure")
+        if len(command) > self._MAX_COMMAND_LEN:
+            return ToolResult(text_result_for_llm=f"[Error: command exceeds {self._MAX_COMMAND_LEN}-character limit]", result_type="failure")
+        if self._BLOCKLIST_RE.search(command):
+            return ToolResult(text_result_for_llm="[Error: command rejected — matches destructive-pattern blocklist]", result_type="failure")
         print(f"\n\033[36m[Tool: bash_exec]\033[0m {command}", flush=True)
         try:
-            proc = await asyncio.create_subprocess_shell(
-                command,
+            proc = await asyncio.create_subprocess_exec(
+                "/bin/sh", "-c", command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
