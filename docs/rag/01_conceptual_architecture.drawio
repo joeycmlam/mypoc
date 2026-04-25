@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="conceptual" name="Conceptual Architecture">
-        <mxGraphModel dx="1452" dy="869" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1400" math="0" shadow="0">
+        <mxGraphModel dx="1147" dy="696" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1400" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -175,22 +175,22 @@
                     <mxGeometry x="60" y="990" width="90" height="34" as="geometry"/>
                 </mxCell>
                 <mxCell id="tl2" value="GitHub" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#E6F1FB;strokeColor=#2563EB;fontStyle=1;fontSize=12;fontColor=#0C447C;" parent="1" vertex="1">
-                    <mxGeometry x="165" y="990" width="90" height="34" as="geometry"/>
+                    <mxGeometry x="191" y="990" width="90" height="34" as="geometry"/>
                 </mxCell>
                 <mxCell id="tl3" value="ServiceNow" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#E6F1FB;strokeColor=#2563EB;fontStyle=1;fontSize=12;fontColor=#0C447C;" parent="1" vertex="1">
-                    <mxGeometry x="270" y="990" width="100" height="34" as="geometry"/>
+                    <mxGeometry x="322" y="990" width="100" height="34" as="geometry"/>
                 </mxCell>
                 <mxCell id="tl4" value="ADX" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#FAEEDA;strokeColor=#D97706;fontStyle=1;fontSize=12;fontColor=#633806;" parent="1" vertex="1">
-                    <mxGeometry x="385" y="990" width="80" height="34" as="geometry"/>
+                    <mxGeometry x="603" y="990" width="81" height="34" as="geometry"/>
                 </mxCell>
                 <mxCell id="tl5" value="NewRelic" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#FAEEDA;strokeColor=#D97706;fontStyle=1;fontSize=12;fontColor=#633806;" parent="1" vertex="1">
-                    <mxGeometry x="480" y="990" width="90" height="34" as="geometry"/>
+                    <mxGeometry x="725" y="990" width="91" height="34" as="geometry"/>
                 </mxCell>
                 <mxCell id="tl6" value="AKS" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#FAEEDA;strokeColor=#D97706;fontStyle=1;fontSize=12;fontColor=#633806;" parent="1" vertex="1">
-                    <mxGeometry x="585" y="990" width="80" height="34" as="geometry"/>
+                    <mxGeometry x="857" y="990" width="81" height="34" as="geometry"/>
                 </mxCell>
                 <mxCell id="tl7" value="CA Scheduler" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#FAEEDA;strokeColor=#D97706;fontStyle=1;fontSize=12;fontColor=#633806;" parent="1" vertex="1">
-                    <mxGeometry x="680" y="990" width="100" height="34" as="geometry"/>
+                    <mxGeometry x="979" y="990" width="101" height="34" as="geometry"/>
                 </mxCell>
                 <mxCell id="pr_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=3;fillColor=#F4F6FB;strokeColor=#8A94A6;strokeWidth=0.5;" parent="1" vertex="1">
                     <mxGeometry x="60" y="1060" width="1160" height="100" as="geometry"/>
@@ -224,6 +224,9 @@
                 </mxCell>
                 <mxCell id="e_dev_sk" style="dashed=1;strokeColor=#993C1D;strokeWidth=0.8;entryX=0.888;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ag_dev" target="sk_bg" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="Confluence" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#E6F1FB;strokeColor=#2563EB;fontStyle=1;fontSize=12;fontColor=#0C447C;" vertex="1" parent="1">
+                    <mxGeometry x="463" y="990" width="100" height="34" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
