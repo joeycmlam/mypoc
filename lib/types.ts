@@ -27,6 +27,23 @@ export interface AgentsResponse {
   agents: string[];
 }
 
+export interface AgentMetadata {
+  id?: string;
+  name?: string;
+  description?: string;
+  skills?: string[];
+  tools?: string[];
+  triggers?: string[];
+  agents?: string[];
+  "argument-hint"?: string;
+}
+
+export interface AgentDetail {
+  file: string;
+  content: string;
+  metadata: AgentMetadata;
+}
+
 export interface HealthResponse {
   status: string;
   mode?: string;

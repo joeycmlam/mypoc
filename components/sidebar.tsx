@@ -1,7 +1,9 @@
 "use client";
 
-import { Bot, Info, ExternalLink, Zap, History, Trash2 } from "lucide-react";
+import { Bot, Info, ExternalLink, Zap, FileText } from "lucide-react";
+import { useState } from "react";
 import { AgentSelector } from "./agent-selector";
+import { AgentContextPanel } from "./agent-context-panel";
 import { getAgentDisplayName, getAgentDescription } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +24,10 @@ export function Sidebar({
   maxTurns,
   onMaxTurnsChange,
 }: SidebarProps) {
+  const [panelAgent, setPanelAgent] = useState<string | null>(null);
+
   return (
+    <>
     <aside className="w-80 border-r border-border bg-card/30 flex flex-col">
       <div className="p-4 border-b border-border">
         <AgentSelector
@@ -39,7 +44,7 @@ export function Sidebar({
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary shrink-0">
               <Bot className="w-5 h-5" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h3 className="font-medium truncate">
                 {getAgentDisplayName(selectedAgent)}
               </h3>
@@ -47,6 +52,13 @@ export function Sidebar({
                 {getAgentDescription(selectedAgent)}
               </p>
             </div>
+            <button
+              onClick={() => setPanelAgent(selectedAgent)}
+              title="View agent context"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
@@ -120,5 +132,11 @@ export function Sidebar({
         </a>
       </div>
     </aside>
+
+    <AgentContextPanel
+      agentFile={panelAgent}
+      onClose={() => setPanelAgent(null)}
+    />
+    </>
   );
 }
