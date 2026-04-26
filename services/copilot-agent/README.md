@@ -400,7 +400,6 @@ pip install -e .
 This registers three console entry points so you can run the agents from anywhere in your shell:
 
 ```bash
-copilot-agent -a agents/assistant.md -m gpt-4o -i "Hello"   # → agent.py
 agent-copilot -a agents/assistant.md -m gpt-4o -i "Hello"   # → agent_copilot.py
 agent-api --port 8000                                        # → api_server.py
 ```
