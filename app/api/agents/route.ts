@@ -19,7 +19,15 @@ export async function GET() {
       next: { revalidate: 0 },
     });
     if (response.ok) {
-      return NextResponse.json(await response.json());
+      const data = await response.json();
+      // Normalize: backend may return {agents: [...objects], files: [...strings]}
+      // Prefer `files` (plain filenames) when present; otherwise ensure agents are strings.
+      const agents: string[] = Array.isArray(data.files)
+        ? data.files
+        : (data.agents as unknown[]).map((a) =>
+            typeof a === "string" ? a : (a as { id: string }).id
+          );
+      return NextResponse.json({ agents });
     }
   } catch {
     // Backend not available, return mock response
