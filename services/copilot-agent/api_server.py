@@ -3,11 +3,12 @@
 FastAPI HTTP service wrapping AgentRunner from agent_copilot.py.
 
 Endpoints:
-  GET  /health  — liveness check
-  GET  /agents  — list registered agents (from AgentRegistry) + all .md files
-  GET  /skills  — list registered skills (from SkillRegistry)
-  POST /run     — blocking run, returns {"content": "..."}
-  POST /stream  — SSE streaming run
+  GET  /health           — liveness check
+  GET  /agents           — list registered agents (from AgentRegistry) + all .md files
+  GET  /agents/content   — return content + metadata for a specific agent file (?file=<name>)
+  GET  /skills           — list registered skills (from SkillRegistry)
+  POST /run              — blocking run, returns {"content": "..."}
+  POST /stream           — SSE streaming run
 
 Usage:
   python api_server.py [--host HOST] [--port PORT] [--reload]
@@ -21,8 +22,9 @@ import json
 from pathlib import Path
 from typing import Optional
 
+import frontmatter
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -101,6 +103,22 @@ async def list_agents():
     # also surface unregistered .md files for backward compatibility
     all_files = sorted(p.name for p in AGENTS_DIR.glob("*.md")) if AGENTS_DIR.exists() else []
     return {"agents": registered, "files": all_files}
+
+
+@app.get("/agents/content")
+async def agent_content(file: str = Query(..., description="Agent filename, e.g. ba.agent.md")):
+    """Return the system prompt content and frontmatter metadata for a given agent file."""
+    path = _resolve_agent_path(f"agents/{file}")
+    try:
+        post = frontmatter.load(str(path))
+        return {
+            "file": file,
+            "content": post.content,
+            "metadata": dict(post.metadata),
+        }
+    except Exception:
+        raw = path.read_text(encoding="utf-8")
+        return {"file": file, "content": raw, "metadata": {}}
 
 
 @app.get("/skills")

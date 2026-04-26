@@ -1,4 +1,5 @@
 import type {
+  AgentDetail,
   AgentsResponse,
   HealthResponse,
   StreamAgentParams,
@@ -8,6 +9,12 @@ import type {
 export async function fetchAgents(): Promise<AgentsResponse> {
   const res = await fetch("/api/agents");
   if (!res.ok) throw new Error("Failed to fetch agents");
+  return res.json();
+}
+
+export async function fetchAgentContent(file: string): Promise<AgentDetail> {
+  const res = await fetch(`/api/agents/content?file=${encodeURIComponent(file)}`);
+  if (!res.ok) throw new Error("Failed to fetch agent content");
   return res.json();
 }
 
