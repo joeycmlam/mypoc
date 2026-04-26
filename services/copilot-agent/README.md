@@ -2,6 +2,27 @@
 
 Two CLI agents — choose the one that matches your setup:
 
+## Quick Start
+
+```bash
+# 1. Authenticate (one-time)
+gh extension install github/gh-copilot
+gh auth login
+
+# 2. Set up the virtual environment (one-time)
+cd services/copilot-agent
+python -m venv .venv
+source .venv/bin/activate        # macOS/Linux
+pip install -r requirements.txt
+
+# 3a. Run the CLI agent
+python agent_copilot.py -a agents/assistant.md -m gpt-4o -i "Hello"
+
+# 3b. OR start the API server (for the Next.js UI)
+python api_server.py             # http://localhost:8000
+```
+
+
 | Script | SDK | Auth |
 |--------|-----|------|
 | `agent_copilot.py` | `github-copilot-sdk` | GitHub Copilot CLI (OAuth) — **recommended** |
@@ -43,7 +64,7 @@ pip install -r requirements.txt
 
 ```
 python agent_copilot.py -a <agent-file> -m <model> [-i <instruction>] [--interactive] [--no-stream] [--max-turns N]
-python agent_copilot.py -a agents/ba.agent.md -m gpt-4o -i "Please provivde the analysis of JIRA https://joeycmlam-1762529818344.atlassian.net/browse/SCRUM-9"
+python agent_copilot.py -a agents/ba.agent.md -m gpt-4o -i "Please provide the analysis of JIRA https://joeycmlam-1762529818344.atlassian.net/browse/SCRUM-9"
 ```
 
 #### Arguments

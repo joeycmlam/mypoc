@@ -4,14 +4,23 @@ A CLI tool that reads a Jira issue — including its **description**, **comments
 
 Supports attachment types: `.txt`, `.md`, `.csv`, `.json`, `.yaml`, `.log`, `.pdf`, `.docx`, `.xlsx`.
 
-## Setup
+## Quick Start
 
 ```bash
-cd app/jira-cli
+# 1. Set up the virtual environment (one-time)
+cd services/jira-cli
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate        # macOS/Linux
 pip install -r requirements.txt
+
+# 2. Configure Jira credentials (one-time)
+cp .env.example .env             # then edit .env
+
+# 3. Run
+python jira_cli.py PROJECT-123
 ```
+
+## Configuration
 
 Copy `.env.example` to `.env` and fill in your Jira credentials:
 
